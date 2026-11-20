@@ -63,6 +63,9 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .gem button,.gem a.btn{border-color:#f2f4f5;color:#f2f4f5}.gem button.pri{border-color:var(--red);color:#fff}
 .gem textarea{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:110px;margin-top:10px}
 .gem .solbtn{border-color:#4cc985;color:#4cc985;margin-top:10px}
+.kbadge{display:inline-block;font-size:12px;font-weight:700;background:var(--ink);color:var(--bg);border-radius:6px;padding:2px 8px;margin-bottom:6px}
+.ltitle{font-weight:700;margin:0 0 4px!important}
+.case.lesson{border-left:4px solid var(--ink)}
 .status{font-size:13px;color:var(--mute);margin:8px 0 0}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
@@ -140,6 +143,7 @@ body.lock{overflow:hidden}
   <div class="search">
     <div class="row" style="margin-bottom:8px"><span class="lab2">Gemini အဖြေ ဘာသာ</span><select id="lang" aria-label="Answer language"><option value="my">မြန်မာလို</option><option value="en">English</option></select></div>
     <input id="q" type="search" placeholder="ရှာရန်: model, error, IC, solution (ဥပမာ 12R, PM7250B)">
+    <div class="chips" id="kinds"></div>
     <div class="chips" id="chips"></div>
   </div>
   <div id="list"></div>
@@ -177,7 +181,7 @@ const zg2uni=t=>ZG.reduce((x,[f,r])=>x.replace(new RegExp(f,'g'),r),t);
 const isZg=t=>/(^|[^\u1000-\u109f])[\u1031\u103b]|[\u105a\u1060-\u1097]|\u1039(?![\u1000-\u1021])/.test(t);
 const fixMM=t=>{let n=0;const out=String(t||'').split('\n').map(l=>isZg(l)?(n++,zg2uni(l)):l).join('\n');return{text:out,changed:n>0}};
 const ERR=['Baseband Unknown','No power','Charging error','Not charging','Radio Off','No service','No signal','Hang logo','Restart','Dead','No display','No touch','Network error','Wifi error','Bluetooth error','No sound','Mic error','Camera error','Short'];
-let cases=[],db=null,sample=null,mode='wait',filter='',chip='';
+let cases=[],db=null,sample=null,mode='wait',filter='',chip='',kind='';
 
 const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000)};
 const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('ကူးပြီးပါပြီ')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('ကူးပြီးပါပြီ')}catch(x){toast('ကူးမရပါ')}a.remove()}};
@@ -199,6 +203,7 @@ function formulaHTML(o){
 }
 function promptText(o){
   if(!o.model||!o.error)return 'Note ခွဲပြီးရင် prompt ဒီမှာ ပေါ်မယ်';
+  if(o.kind==='lesson')return lessonPrompt(o);
   const my=$('lang').value==='my', ics=icList(o.ics).join(', ')||'unknown';
   const L=['You are an expert mobile phone board-level (motherboard) repair technician.','',
   `Phone model: ${o.model}`,`Fault / symptom: ${o.error}`];
@@ -218,10 +223,35 @@ function promptText(o){
   my?'Answer in Burmese (မြန်မာဘာသာ), keep IC names, pin names and technical terms in English.':'Answer in clear English.');
   return L.join('\n');
 }
+function lessonPrompt(o){
+  const my=$('lang').value==='my',ics=icList(o.ics).join(', ')||'unknown';
+  return ['You are an expert mobile phone board-level (motherboard) repair instructor.','',
+  'Here is a repair shortcut / lesson I learned'+(o.source?` from ${o.source}`:'')+'. Check it, correct anything wrong, and expand it.','',
+  o.title?`Title: ${o.title}`:'',`Example model: ${o.model}`,`Topic: ${o.error}`,`ICs: ${ics}`,
+  `Lines / points to check:\n${o.diag}`,o.fix?`Key tips:\n${o.fix}`:'',o.applies?`Also applies to: ${o.applies}`:'','',
+  'Please:',
+  `1. Explain the circuit principle behind "${o.error}" (how the block works), not only for this model.`,
+  '2. For every line / point listed: what it does, where it goes (connector pin, CPU, PMIC, driver IC), and how to check it.',
+  '3. DIODE MODE MEASUREMENT table (power off, battery removed): normal diode value for each line in both directions (red probe on ground / black probe on ground), and what 0.000, OL or abnormal values mean.',
+  '4. VOLTAGE MEASUREMENT table (power on / display on): expected voltage for each power rail and signal line (e.g. 1.8V, +5V, -5V, backlight anode, reset, TE), and what abnormal readings point to.',
+  `5. Other phone models and platforms that use the same ICs (${ics}) where this same check applies.`,
+  '6. Common faults and quick fixes for this block, and resources (schematic / boardview names like ZXW, Borneo, Pragma, WuXinJi; forum threads; YouTube search keywords).','',
+  'Present the diode and voltage values as tables (Point | Normal value | Abnormal → meaning). If an exact value is not known, say so and give the typical value for the same PMIC/CPU instead of guessing.','',
+  my?'Answer in Burmese (မြန်မာဘာသာ), keep IC names, pin names and technical terms in English.':'Answer in clear English.'].filter((l,i,a)=>l!==''||a[i-1]!=='').join('\n');
+}
 function draw(){$('formula').innerHTML=formulaHTML(read())}
 
 /* ---- splitting notes: Claude first, simple rules as fallback ---- */
+const looksLesson=t=>/#|ဘာတွေဘယ်လိုစစ်|အဖြေရှာနည်း|လေ့လာ|မှတ်သား|စစ်ရမယ့်/.test(t)&&t.split('\n').length>5;
 function ruleParse(block){
+  if(looksLesson(block)){
+    const L=block.split('\n').map(l=>l.trim()).filter(Boolean);
+    const BR=/(Redmi|Xiaomi|Poco|Mi |Samsung|Galaxy|iPhone|Oppo|Vivo|Realme|Infinix|Tecno|Huawei|Honor|Nokia|Itel)\s*[\w()+ ]{1,20}/i;
+    const ml=L.find(l=>BR.test(l));const model=ml?(ml.match(BR)[0].replace(/\s+(Display|Charging|No|Baseband|Error|စစ်).*$/i,'').trim()):'';
+    const em=block.match(/(Display|Charging|Baseband|Network|Power|Backlight|Touch|Camera|Audio|Wifi|Speaker|Mic)\s*(Error|Problem|Unknown)?/i);
+    const ics=[...new Set(block.match(/\b[A-Z]{2,}[0-9]{3,}[A-Z0-9-]*\b/g)||[])].join(', ');
+    return{kind:'lesson',model,error:em?em[0].trim():'Unknown',title:L.filter(l=>l.startsWith('#')).join(' '),diag:L.filter(l=>!l.startsWith('#')).join('\n'),ics,fix:'',source:(block.match(/ဆရာ\s*([^\sပ]+)/)||[])[1]||'',applies:'',done:true};
+  }
   const lines=block.split('\n').map(l=>l.replace(/✅/g,'').trim()).filter(Boolean);
   if(!lines.length)return null;
   const done=/done|✅|ok\b/i.test(block);
@@ -237,23 +267,31 @@ function ruleParse(block){
   return{model,error,diag:lines.filter(l=>!fixRe.test(l)).join('\n'),ics:[...icSet].join(', '),fix:fix.join('\n'),done};
 }
 async function aiParse(note){
-  const instr=`You split a mobile phone motherboard repair technician's notes (Burmese mixed with English) into structured cases.
-Notes may hold one or several cases (often separated by blank lines; each starts with a phone model). A single line like "Realme C3 Frp" is also a case. Ignore shop advertising, addresses and phone numbers.
-For each case return:
-- model: phone model only, cleaned (e.g. "Redmi Note 12 Pro", "Redmi 10 (2022)")
-- error: the fault in short English (e.g. "Baseband Unknown", "No power", "Charging error", "Radio Off")
-- diag: what was measured or found (lines, OL, ampere, water damage…), keep the technician's Burmese wording, one item per line
-- ics: comma-separated IC / part names involved (e.g. "MT6190M, CPU")
-- fix: what was done to repair it, keep Burmese wording, one step per line
-- done: true if it was fixed (Done, ✅, OK), else false
+  const instr=`You split a mobile phone motherboard repair technician's notes (Burmese mixed with English) into structured entries.
+There are two kinds:
+- "case": a repair job that was done (model + fault + what was found + what fixed it). Notes may hold several cases, often separated by blank lines, each starting with a phone model.
+- "lesson": a learning shortcut / how-to-check guide (often with # hashtags, a teacher's name, "ဘာတွေဘယ်လိုစစ်မလဲ", "အဖြေရှာနည်း", lists of lines to check). One lesson is one entry.
+Ignore shop advertising, addresses and phone numbers.
+For each entry return:
+- kind: "case" or "lesson"
+- model: phone model only, cleaned (e.g. "Redmi 8", "Redmi 10 (2022)")
+- error: the fault / topic in short English (e.g. "Display Error", "No power", "Baseband Unknown")
+- title: for a lesson, its heading line(s) as written (e.g. "#ဘာတွေဘယ်လိုစစ်မလဲ-15"); "" for a case
+- diag: case → what was measured or found; lesson → the lines / points / voltages to check. Keep the technician's Burmese wording, one item per line
+- ics: comma-separated IC / part names involved (e.g. "PMI632-902-00, Backlight Driver IC")
+- fix: case → what was done to repair it; lesson → the key tips and causes to remember (e.g. a resistor that causes black screen). Keep Burmese wording, one item per line
+- source: teacher or source named in a lesson, else ""
+- applies: other models or platforms the lesson says it also applies to, else ""
+- done: case → true if fixed (Done, ✅, OK), else false; lesson → true
 diag must not just repeat an IC name. Do not invent anything not in the notes; leave a field "" if missing.
-Reply with JSON only: {"cases":[{"model":"","error":"","diag":"","ics":"","fix":"","done":true}]}
+Reply with JSON only: {"cases":[{"kind":"case","model":"","error":"","title":"","diag":"","ics":"","fix":"","source":"","applies":"","done":true}]}
 
 NOTES:
 ${note}`;
   const r=await sample.json(instr,{modelTier:'quick'});
   const list=Array.isArray(r)?r:(r&&r.cases)||[];
-  return list.filter(c=>c&&c.model).map(c=>({model:String(c.model),error:String(c.error||'Unknown'),diag:String(c.diag||''),ics:String(c.ics||''),fix:String(c.fix||''),done:c.done!==false}));
+  const S=v=>String(v??'').trim();
+  return list.filter(c=>c&&c.model).map(c=>({kind:c.kind==='lesson'?'lesson':'case',model:S(c.model),error:S(c.error)||'Unknown',title:S(c.title),diag:S(c.diag),ics:S(c.ics),fix:S(c.fix),source:S(c.source),applies:S(c.applies),done:c.done!==false}));
 }
 
 /* ---- storage: shared db, local fallback ---- */
@@ -263,7 +301,7 @@ const saveLocal=()=>{try{localStorage.setItem(LK,JSON.stringify(cases))}catch(e)
 async function put(o){
   o.id=o.id||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   o.updated=Date.now();o.created=o.created||o.updated;
-  const data={};['model','error','diag','ics','fix','done','ai','note','count','created','updated'].forEach(k=>{if(o[k]!==undefined)data[k]=o[k]});
+  const data={};['kind','title','source','applies','model','error','diag','ics','fix','done','ai','note','count','created','updated'].forEach(k=>{if(o[k]!==undefined)data[k]=o[k]});
   if(mode==='db')await db.collection('cases').doc(o.id).set(data);
   else{const i=cases.findIndex(c=>c.id===o.id);i<0?cases.unshift({...data,id:o.id}):cases[i]={...data,id:o.id};saveLocal();render()}
   return o;
@@ -285,11 +323,16 @@ async function showAccount(){
 
 /* ---- list grouped by model ---- */
 function card(c){
-  return `<article class="card case">
+  const L=c.kind==='lesson';
+  return `<article class="card case${L?' lesson':''}">
+    ${L?`<span class="kbadge">Shortcut သင်ခန်းစာ</span>${c.title?`<p class="ltitle">${esc(c.title)}</p>`:''}`:''}
     <div class="err">${esc(c.error)} <span class="${c.done?'done':''}">${c.done?'✅':'⏳'}</span>${(c.count||1)>1?`<span class="seen">ကြုံဖူး ×${c.count}</span>`:''}</div>
-    ${c.diag?`<p><span class="k">စစ်ဆေးချက်</span>${esc(c.diag).replace(/\n/g,'<br>')}</p>`:''}
+    ${c.diag?`<p><span class="k">${L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်'}</span>${esc(c.diag).replace(/\n/g,'<br>')}</p>`:''}
     ${c.ics?`<p><span class="k">IC</span>${icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join('')}</p>`:''}
-    ${c.fix?`<p><span class="k">ပြင်နည်း</span>${esc(c.fix).replace(/\n/g,'<br>')}</p>`:''}
+    ${c.fix?`<p><span class="k">${L?'အထူးသတိထားရန်':'ပြင်နည်း'}</span>${esc(c.fix).replace(/\n/g,'<br>')}</p>`:''}
+    ${c.applies?`<p><span class="k">တူတဲ့ Model / Platform</span>${esc(c.applies)}</p>`:''}
+    ${c.source?`<p><span class="k">ဆရာ / Source</span>${esc(c.source)}</p>`:''}
+    ${c.note&&L?`<button class="sm" data-act="note" data-id="${c.id}" style="margin-top:6px">မူရင်းစာ အပြည့်ကြည့်</button>`:''}
     <div class="row" style="margin-top:10px">
       <button class="sm" data-act="edit" data-id="${c.id}">ပြင်</button>
       <button class="sm" data-act="del" data-id="${c.id}">ဖျက်</button>
@@ -313,9 +356,11 @@ function render(){
   document.querySelectorAll('textarea[data-sol]').forEach(t=>{drafts[t.dataset.sol]=t.value;if(document.activeElement===t)focusId=t.dataset.sol});
   cases.sort((a,b)=>(b.created||0)-(a.created||0));
   const errs=[...new Set(cases.map(c=>(c.error||'').replace(/error/i,'').trim()).filter(Boolean))];
+  const kinds=[['','အားလုံး'],['case','Repair case'],['lesson','Shortcut သင်ခန်းစာ']];
+  $('kinds').innerHTML=kinds.map(([k,l])=>`<button class="chip ${kind===k?'on':''}" data-kind="${k}">${l} (${k?cases.filter(c=>(c.kind||'case')===k).length:cases.length})</button>`).join('');
   $('chips').innerHTML=['',...errs].map(e=>`<button class="chip ${chip===e?'on':''}" data-chip="${esc(e)}">${e?esc(e):'အားလုံး'}</button>`).join('');
   const q=filter.toLowerCase();
-  const show=cases.filter(c=>(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.diag,c.ics,c.fix,c.ai].join(' ').toLowerCase().includes(q)));
+  const show=cases.filter(c=>(!kind||(c.kind||'case')===kind)&&(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.title,c.diag,c.ics,c.fix,c.source,c.applies,c.ai].join(' ').toLowerCase().includes(q)));
   $('count').textContent=`(${show.length}/${cases.length})`;
   const groups=new Map();
   show.forEach(c=>{const k=mkey(c.model);if(!groups.has(k))groups.set(k,{name:c.model,items:[]});groups.get(k).items.push(c)});
@@ -345,7 +390,7 @@ $('splitBtn').onclick=async()=>{
   const b=$('splitBtn');b.disabled=true;b.textContent='ခွဲနေသည်…';
   let list=[];
   if(sample){try{list=await aiParse(note)}catch(e){list=[]}}
-  if(!list.length)list=note.split(/\n\s*\n/).map(ruleParse).filter(o=>o&&o.model);
+  if(!list.length)list=(looksLesson(note)?[ruleParse(note)]:note.split(/\n\s*\n/).map(ruleParse)).filter(o=>o&&o.model);
   b.disabled=false;b.textContent='ခွဲပြီး သိမ်းမယ်';
   if(!list.length)return toast('ခွဲမရပါ — ဖုန်း model ကို ပထမစာကြောင်းမှာ ရေးပါ');
   const all=list.length;list=list.filter(o=>String(o.model||'').trim()&&String(o.diag||'').trim());
@@ -367,6 +412,8 @@ const sameSet=(a,b)=>a.size===b.size&&[...a].every(x=>b.has(x));
 const ACT=['change','reball','jumper','clean','replace','ပြန်ဆက်','ပြန်ထိုင်','ဖော်'];
 const acts=s=>new Set(ACT.filter(k=>String(s||'').toLowerCase().includes(k)));
 function sameCase(a,b){
+  if((a.kind||'case')!==(b.kind||'case'))return false;
+  if(a.kind==='lesson')return mkey(a.model)===mkey(b.model)&&norm(a.error)===norm(b.error)&&norm(a.title)===norm(b.title)&&norm(a.diag).slice(0,60)===norm(b.diag).slice(0,60);
   if(mkey(a.model)!==mkey(b.model)||norm(a.error)!==norm(b.error))return false;
   if(norm(a.fix)===norm(b.fix))return true;
   const ia=icSetOf(a.ics),ib=icSetOf(b.ics);
@@ -420,9 +467,10 @@ $('bkImport').onclick=async()=>{
 let viewCase=null;
 const closeView=()=>{$('viewer').classList.remove('on');document.body.classList.remove('lock')};
 $('vClose').onclick=closeView;
-$('vCopy').onclick=()=>{if(viewCase)copy(viewCase.ai||'')};
+$('vCopy').onclick=()=>{if(viewCase)copy(viewCase.text||'')};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('viewer').classList.contains('on'))closeView()});
 $('q').addEventListener('input',e=>{filter=e.target.value;render()});
+$('kinds').addEventListener('click',e=>{const b=e.target.closest('[data-kind]');if(!b)return;kind=b.dataset.kind;render()});
 $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(!b)return;chip=b.dataset.chip;render()});
 $('list').addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const c=cases.find(x=>x.id===b.dataset.id);if(!c)return;
@@ -430,7 +478,7 @@ $('list').addEventListener('click',async e=>{
   if(a==='prompt')copy(promptText(c));
   else if(a==='savesol'){const t=document.querySelector(`textarea[data-sol="${c.id}"]`);const v=t?fixMM(t.value).text.trim():'';if(!v)return toast('Gemini အဖြေကို paste လုပ်ပါ');
     try{openSol.delete(c.id);if(t)t.value='';await put({...c,ai:v});toast(`Solution ကို ${c.model} အောက်မှာ သိမ်းပြီ`);if(mode!=='db')render()}catch(x){toast('သိမ်းမရပါ')}}
-  else if(a==='view'){viewCase=c;$('vTitle').innerHTML=`${esc(c.model)}<span class="vsub">${esc(c.error)} — ဖုန်း Solution</span>`;$('vBody').textContent=c.ai||'';$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()}
+  else if(a==='view'||a==='note'){const isNote=a==='note';viewCase={text:isNote?c.note:c.ai};$('vTitle').innerHTML=`${esc(c.model)}<span class="vsub">${esc(c.error)} — ${isNote?'မူရင်းစာ':'ဖုန်း Solution'}</span>`;$('vBody').textContent=viewCase.text||'';$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()}
   else if(a==='sol'){openSol.add(c.id);render();const t=document.querySelector(`textarea[data-sol="${c.id}"]`);if(t)t.focus()}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
   else if(a==='del'){
