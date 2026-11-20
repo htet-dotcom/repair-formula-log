@@ -1,0 +1,9 @@
+<resources>
+    <!-- Light theme: the page's prefers-color-scheme follows this (and values-night). -->
+    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg_light</item>
+        <item name="android:statusBarColor">@color/panel</item>
+        <item name="android:navigationBarColor">@color/bg_light</item>
+        <item name="android:colorAccent">#E8251A</item>
+    </style>
+</resources>

@@ -502,6 +502,7 @@ async function gdWrite(data){
 }
 async function gdSync(){
   if(mode!=='local'||!gd.token)return;
+  if(Date.now()>gd.exp&&window.RFLNative){gd.token=null;return gdNative(false)}
   if(Date.now()>gd.exp){gd.token=null;return gdOff('Google ချိတ်ဆက်မှု သက်တမ်းကုန်ပြီ — Screen ကို တစ်ချက်နှိပ်ရင် ပြန်ချိတ်မယ်')}
   if(gd.busy){gd.again=true;return}
   gd.busy=true;gdStat('Google Drive နဲ့ Sync လုပ်နေသည်…');
@@ -526,7 +527,17 @@ function gdAuto(e){   /* first tap after reload / expiry → reconnect quietly (
   document.removeEventListener('click',gdAuto,true);gd.armed=false;gdStat('Google Drive နဲ့ ပြန်ချိတ်နေသည်…');gdConnect();
 }
 function gdOff(msg){gd.token=null;ls('gdTok',null);gdArm();$('gdBtn').hidden=false;$('gdBtn').textContent='Sync ပြန်ချိတ်';$('gdNow').hidden=true;setSync('Google Drive Sync ပြတ်နေတယ်','off');gdStat(msg)}
+/* Android app: Google sign-in is done natively (Google blocks its web popup inside apps) */
+function gdNative(interactive){
+  window.rflDriveToken=(tok,sec,err)=>{
+    if(!tok){if(interactive||err!=='consent')gdStat('Google ချိတ်မရပါ: '+(err||''));else gdOff('Google Drive Sync ပြန်ချိတ်ဖို့ ခလုတ်ကို နှိပ်ပါ');return}
+    gd.token=tok;gd.exp=Date.now()+((+sec||3600)-60)*1000;ls('gdOn','1');ls('gdTok',JSON.stringify({t:gd.token,exp:gd.exp}));
+    $('gdBtn').hidden=true;$('gdNow').hidden=false;gdSync();
+  };
+  gdStat('Google Drive နဲ့ ချိတ်နေသည်…');RFLNative.driveToken(!!interactive);
+}
 function gdConnect(){
+  if(window.RFLNative)return gdNative(true);
   const id=gdId();if(!id){$('gdCfg').open=true;return toast('Google Client ID အရင်ထည့်ပါ')}
   if(!(window.google&&google.accounts&&google.accounts.oauth2))return toast('Google ချိတ်ဖို့ ပြင်ဆင်နေသည် — ခဏနေ ထပ်နှိပ်ပါ');
   if(!gd.client)gd.client=google.accounts.oauth2.initTokenClient({client_id:id,scope:'https://www.googleapis.com/auth/drive.file',
@@ -542,10 +553,12 @@ function gdSetup(){
   let tk=null;try{tk=JSON.parse(ls('gdTok')||'null')}catch(e){}
   if(ls('gdOn')&&tk&&tk.t&&tk.exp>Date.now()+30000){   /* still valid from last time → no need to tap */
     gd.token=tk.t;gd.exp=tk.exp;$('gdBtn').hidden=true;$('gdNow').hidden=false;setSync('Google Drive Sync ဖွင့်ထားတယ်','ok');setTimeout(gdSync,300);
+  }else if(ls('gdOn')&&window.RFLNative){$('gdBtn').textContent='Google Drive Sync ပြန်ချိတ်';gdNative(false);
   }else if(ls('gdOn')){
     $('gdBtn').textContent='Google Drive Sync ပြန်ချိတ်';gdStat('Screen ကို တစ်ချက်နှိပ်လိုက်တာနဲ့ Google Drive ကို အလိုလို ပြန်ချိတ်မယ်');gdArm();
   }else gdStat(gdId()?'တစ်ခါနှိပ်ပြီး Google အကောင့်နဲ့ ချိတ်ပါ — နောက်ပိုင်း ပြင်တိုင်း Drive မှာ အလိုလို သိမ်းမယ်':'Google Client ID မထည့်ရသေးပါ');
-  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;document.head.appendChild(s);
+  if(window.RFLNative)$('gdCfg').hidden=true;
+  else{const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;document.head.appendChild(s)}
   $('gdBtn').onclick=gdConnect;$('gdNow').onclick=gdSync;
   $('gdIdSave').onclick=()=>{const v=$('gdIdIn').value.trim();if(!/\.apps\.googleusercontent\.com$/.test(v))return toast('Client ID မမှန်ပါ (….apps.googleusercontent.com)');ls('gdClientId',v);gd.client=null;$('gdCfg').open=false;gdStat('သိမ်းပြီး — "Google Drive နဲ့ Sync ချိတ်" နှိပ်ပါ')};
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gdSync()});
@@ -842,6 +855,10 @@ async function saveImg(c,i){
     const ext=((blob.type||'image/jpeg').split('/')[1]||'jpg').replace('jpeg','jpg');
     const fname=`${c.model}-${c.error}-${i+1}`.replace(/[\\/:*?"<>|\s]+/g,'_')+'.'+ext;
     const file=new File([blob],fname,{type:blob.type||'image/jpeg'});
+    if(window.RFLNative){   /* Android app: save straight into Pictures/RepairLog */
+      const b64=await new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]);fr.onerror=no;fr.readAsDataURL(blob)});
+      return toast(RFLNative.saveImage(fname,blob.type||'image/jpeg',b64)==='ok'?'ပုံ Save ပြီး — Gallery ထဲက RepairLog မှာ ကြည့်ပါ':'Save မရပါ');
+    }
     if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}
     const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fname;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),5000);toast('ပုံ Save ပြီး — Gallery / Download ထဲမှာ ကြည့်ပါ');
@@ -904,7 +921,7 @@ if(window.claude&&claude.use){
   }).catch(()=>{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')});
 }else{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')}
 gdSetup();
-if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')&&!(window.claude&&claude.use))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')&&!(window.claude&&claude.use)&&!window.RFLNative)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 </script>
 </body>
