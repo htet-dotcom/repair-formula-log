@@ -59,51 +59,78 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .panel select{background:#1a1e22;color:#f2f4f5;border:1px solid #2e353b;border-radius:10px;min-height:36px;padding:0 8px;font:14px Inter,"Noto Sans Myanmar",sans-serif}
 .panel textarea{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:150px}
 .panel hr{border:0;border-top:1px solid #2e353b;margin:16px 0}
-.sync{display:inline-flex;gap:8px;align-items:center;margin:10px 0 0;padding:6px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600}
+.syncbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+#gdStat:empty{display:none}#gdCfg summary{min-height:36px;font-size:14px}
+.sync{display:inline-flex;gap:8px;align-items:center;margin:0;min-height:36px;padding:6px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600}
 .sync::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--mute)}
 .sync.ok::before{background:var(--ok)}.sync.off::before{background:var(--red)}
 .seen{font-size:13px;font-weight:600;color:var(--mute);margin-left:6px}
 .lab2{font-size:14px;font-weight:600;color:var(--mute)}
+.lhead{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
+#count{color:var(--mute);font-weight:500}
+.langsel{display:flex;gap:8px;align-items:center;margin:0;font-size:14px;color:var(--mute)}
 #lang{min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 10px;font:15px Inter,"Noto Sans Myanmar",sans-serif}
-.gem{margin-top:12px;padding:12px;border-radius:12px;background:var(--panel);color:var(--panelInk)}
-.gem .gl{font-size:13px;color:#9aa5ae;margin:0 0 8px}
-.gem button,.gem a.btn{border-color:#f2f4f5;color:#f2f4f5}.gem button.pri{border-color:var(--red);color:#fff}
-.gem textarea{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:110px;margin-top:10px}
-.gem .solbtn{border-color:#4cc985;color:#4cc985;margin-top:10px}
+.gem{padding:12px;border-radius:12px;background:var(--panel);color:var(--panelInk);display:grid;gap:8px}
+.gem .gl{font-size:12px;font-weight:600;color:#9aa5ae;margin:6px 0 0;letter-spacing:.02em}
+.gem .gl:first-child{margin-top:0}
+.gem button,.gem a.btn{border-color:#5b6670;color:#f2f4f5;justify-content:center;text-align:center;width:100%;min-height:42px;font-size:14px;padding:0 10px}
+.gem button.pri{background:var(--red);border-color:var(--red);color:#fff}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gem textarea{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:110px;margin:0}
+.gem .solbtn{border-color:#4cc985;color:#4cc985;justify-content:space-between;padding:0 14px}
 .kbadge{display:inline-block;font-size:12px;font-weight:700;background:var(--ink);color:var(--bg);border-radius:6px;padding:2px 8px;margin-bottom:6px}
-.ltitle{font-weight:700;margin:0 0 4px!important}
+.ltitle{font-weight:700;margin:0;font-size:15px}
 .case.lesson{border-left:4px solid var(--ink)}
-.thumbs{display:flex;flex-wrap:wrap;gap:8px}
-.th{position:relative}
-.thimg{padding:0;border:1px solid #2e353b;border-radius:10px;overflow:hidden;width:92px;height:92px;min-height:0;background:#1a1e22}
+.thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.th{display:grid;gap:4px}
+.gem .thimg{padding:0;border:1px solid #2e353b;border-radius:10px;overflow:hidden;width:100%;height:auto;aspect-ratio:1;min-height:0;background:#1a1e22}
 .thimg img{width:100%;height:100%;object-fit:cover;display:block}
-.thdel{position:absolute;top:-8px;right:-8px;min-height:0;width:28px;height:28px;padding:0;border-radius:50%;background:#0d0f11!important;border:1px solid #f2f4f5;font-size:13px;justify-content:center}
-.addimg{width:92px;height:92px;border:1px dashed #9aa5ae;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;font-weight:600;cursor:pointer;margin:0;color:#f2f4f5}
+.thbar{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.gem .thbar button{min-height:32px;font-size:13px;padding:0;border-radius:8px}
+.gem .thbar .thdel.sure{background:var(--red);border-color:var(--red)}
+.addimg{width:100%;aspect-ratio:1;border:1px dashed #9aa5ae;border-radius:10px;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;text-align:center;font-size:13px;font-weight:600;cursor:pointer;margin:0;color:#f2f4f5}
+.addimg b{font-size:24px;line-height:1}
 .addimg:focus-within{outline:3px solid var(--red)}
 .addimg{position:relative;overflow:hidden}
 .fileov{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
-.pastezone{margin-top:10px;min-height:52px;border:1px dashed #9aa5ae;border-radius:10px;padding:12px;font-size:14px;line-height:1.6;color:#9aa5ae;overflow:hidden;max-height:120px}
-.extlink{display:flex;margin-top:10px;min-height:44px;align-items:center;justify-content:center;border-radius:10px;background:#f2f4f5;color:#0d0f11!important;font-weight:700;text-decoration:none;font-size:14px;padding:0 12px;text-align:center}
+.pastezone{min-height:48px;border:1px dashed #9aa5ae;border-radius:10px;padding:12px;font-size:14px;line-height:1.6;color:#9aa5ae;overflow:hidden;max-height:120px}
+.extlink{display:flex;min-height:42px;align-items:center;justify-content:center;border-radius:10px;background:#f2f4f5;color:#0d0f11!important;font-weight:700;text-decoration:none;font-size:14px;padding:0 12px;text-align:center}
 .pastezone:empty::before{content:"သို့မဟုတ် — Gemini ပုံကို Copy image လုပ်ပြီး ဒီမှာ ဖိထားပြီး Paste";}
 .pastezone:focus{outline:3px solid var(--red);color:#f2f4f5}
 .vbody img{max-width:100%;height:auto;display:block;margin:0 auto;border-radius:8px}
+.viewer.img .vbody{background:#0d0f11;max-width:none;display:flex;align-items:center;justify-content:center;padding:12px}
+.viewer.img .vbody img{max-height:100%;object-fit:contain}
+.vhead button{flex:none}.vhead h2{min-width:0;overflow-wrap:anywhere}
 .status{font-size:13px;color:var(--mute);margin:8px 0 0}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
-.search{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.chip{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:14px;font-weight:500}
+.search{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0 6px}
+.chips{display:flex;gap:6px;margin-top:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;white-space:nowrap;min-height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:14px;font-weight:500}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .group{margin-top:18px}
 .group>h3{font-size:20px;padding:6px 0 8px;border-bottom:2px solid var(--ink);margin-bottom:10px;display:flex;justify-content:space-between;gap:8px}
-.group>h3 span{color:var(--mute);font:500 14px Inter,"Noto Sans Myanmar",sans-serif}
+.group>h3{align-items:baseline}.group>h3 span:last-child{flex:none;color:var(--mute);font:500 14px Inter,"Noto Sans Myanmar",sans-serif}
 .list{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
 @media(min-width:760px){.list{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.case .err{color:var(--red);font:700 17px/1.3 "Inter Tight","Noto Sans Myanmar",sans-serif;margin:0 0 6px}
-.case p{margin:4px 0;font-size:15px}.case .k{color:var(--mute);font-size:13px;display:block}
+.case{display:flex;flex-direction:column;gap:10px}
+.chead{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.chead .ttl{flex:1}
+.case .err{color:var(--red);font:700 18px/1.3 "Inter Tight","Noto Sans Myanmar",sans-serif;margin:0}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.pill{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:700;background:var(--bg);color:var(--mute)}
+.pill.ok{color:var(--ok)}
+.cact{display:flex;gap:6px;flex:none}
+.cact button{min-height:36px;padding:0 12px;font-size:14px}
+.cact button.danger{border-color:var(--red);color:var(--red)}
+.fields{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:10px}
+.case .k{color:var(--mute);font-size:12px;font-weight:600;letter-spacing:.02em;display:block;margin-bottom:2px}
+.case .v{font-size:15px;line-height:1.6;overflow-wrap:anywhere}
+.case .v .tag{margin:2px 4px 2px 0}
 .tag{display:inline-block;font-size:13px;font-weight:600;border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;background:var(--bg)}
 .done{color:var(--ok)}
-.solbtn{width:100%;margin-top:10px;justify-content:space-between;border-color:var(--ok);color:var(--ok)}
+.solbtn{width:100%;justify-content:space-between;border-color:var(--ok);color:var(--ok)}
 .viewer{position:fixed;inset:0;z-index:20;background:var(--card);color:var(--ink);display:none;flex-direction:column}
 .viewer.on{display:flex}
 .vhead{display:flex;gap:10px;align-items:center;padding:12px max(4vw,14px);border-bottom:1px solid var(--line);background:var(--panel);color:var(--panelInk)}
@@ -120,14 +147,14 @@ body.lock{overflow:hidden}
 <header class="band">
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
   <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
-  <p class="sync" id="sync">Sync စစ်နေသည်…</p>
-  <div id="gdBox" hidden style="margin-top:10px">
-    <div class="row"><button class="sm pri" id="gdBtn">Google Drive နဲ့ Sync ချိတ်</button><button class="sm" id="gdNow" hidden>ယခု Sync</button></div>
-    <p class="status" id="gdStat" style="margin:6px 0 0"></p>
-    <details id="gdCfg" style="margin-top:6px"><summary>Google Client ID ထည့်ရန်</summary>
-      <div class="row" style="margin-top:6px"><input id="gdIdIn" placeholder="xxxx.apps.googleusercontent.com" style="flex:1;min-width:0"><button class="sm" id="gdIdSave">သိမ်း</button></div>
-    </details>
+  <div class="syncbar">
+    <p class="sync" id="sync">Sync စစ်နေသည်…</p>
+    <div class="row" id="gdBox" hidden><button class="sm pri" id="gdBtn">Google Drive နဲ့ Sync ချိတ်</button><button class="sm" id="gdNow" hidden>ယခု Sync</button></div>
   </div>
+  <p class="status" id="gdStat"></p>
+  <details id="gdCfg" hidden><summary>Google Client ID ထည့်ရန်</summary>
+    <div class="row"><input id="gdIdIn" placeholder="xxxx.apps.googleusercontent.com" style="flex:1"><button class="sm" id="gdIdSave">သိမ်း</button></div>
+  </details>
 </header>
 
 <main class="band" style="padding-top:6px">
@@ -167,13 +194,15 @@ body.lock{overflow:hidden}
 </main>
 
 <section class="band" aria-labelledby="lh">
-  <h2 id="lh">Model အလိုက် Case များ <span id="count" style="color:var(--mute);font-weight:500"></span></h2>
-  <div class="search">
-    <div class="row" style="margin-bottom:8px"><span class="lab2">Gemini အဖြေ ဘာသာ</span><select id="lang" aria-label="Answer language"><option value="my">မြန်မာလို</option><option value="en">English</option></select></div>
-    <input id="q" type="search" placeholder="ရှာရန်: model, error, IC, solution (ဥပမာ 12R, PM7250B)">
-    <div class="chips" id="kinds"></div>
-    <div class="chips" id="chips"></div>
+  <div class="lhead">
+    <h2 id="lh">Model အလိုက် Case များ <span id="count"></span></h2>
+    <label class="langsel"><span>Gemini အဖြေ</span><select id="lang" aria-label="Gemini အဖြေ ဘာသာ"><option value="my">မြန်မာလို</option><option value="en">English</option></select></label>
   </div>
+  <div class="search">
+    <input id="q" type="search" placeholder="ရှာရန်: model, error, IC (ဥပမာ 12R, PM7250B)">
+  </div>
+  <div class="chips" id="kinds"></div>
+  <div class="chips" id="chips"></div>
   <div id="list"></div>
 </section>
 
@@ -190,6 +219,7 @@ body.lock{overflow:hidden}
 <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="vTitle">
   <div class="vhead">
     <h2 id="vTitle"></h2>
+    <button class="sm" id="vSave" hidden>⬇ Save</button>
     <button class="sm" id="vCopy">ကူး</button>
     <button class="sm" id="vClose" aria-label="ပိတ်">✕ ပိတ်</button>
   </div>
@@ -468,37 +498,50 @@ async function showAccount(){
 
 /* ---- list grouped by model ---- */
 function card(c){
-  const L=c.kind==='lesson';
+  const L=c.kind==='lesson',imgs=c.imgs||[];
+  const fld=(k,v)=>v?`<div><span class="k">${k}</span><div class="v">${v}</div></div>`:'';
+  const br=t=>esc(t).replace(/\n/g,'<br>');
   return `<article class="card case${L?' lesson':''}">
-    ${L?`<span class="kbadge">Shortcut သင်ခန်းစာ</span>${c.title?`<p class="ltitle">${esc(c.title)}</p>`:''}`:''}
-    <div class="err">${esc(c.error)} <span class="${c.done?'done':''}">${c.done?'✅':'⏳'}</span>${(c.count||1)>1?`<span class="seen">ကြုံဖူး ×${c.count}</span>`:''}</div>
-    ${c.diag?`<p><span class="k">${L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်'}</span>${esc(c.diag).replace(/\n/g,'<br>')}</p>`:''}
-    ${c.ics?`<p><span class="k">IC</span>${icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join('')}</p>`:''}
-    ${c.fix?`<p><span class="k">${L?'အထူးသတိထားရန်':'ပြင်နည်း'}</span>${esc(c.fix).replace(/\n/g,'<br>')}</p>`:''}
-    ${c.applies?`<p><span class="k">တူတဲ့ Model / Platform</span>${esc(c.applies)}</p>`:''}
-    ${c.source?`<p><span class="k">ဆရာ / Source</span>${esc(c.source)}</p>`:''}
-    ${c.note&&L?`<button class="sm" data-act="note" data-id="${c.id}" style="margin-top:6px">မူရင်းစာ အပြည့်ကြည့်</button>`:''}
-    <div class="row" style="margin-top:10px">
-      <button class="sm" data-act="edit" data-id="${c.id}">ပြင်</button>
-      <button class="sm" data-act="del" data-id="${c.id}">ဖျက်</button>
-    </div>
-    <div class="gem">
-      <p class="gl">Gemini — ${esc(c.model)} · ${esc(c.error)}</p>
-      <div class="row">
-        <button class="sm pri" data-act="prompt" data-id="${c.id}">Prompt ကူး</button>
-        <button class="sm" data-act="imgprompt" data-id="${c.id}">ပုံ Prompt ကူး (English)</button>
-        <a class="btn" style="min-height:36px;font-size:14px;padding:0 12px" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့်</a>
+    <div class="chead">
+      <div class="ttl">
+        ${L?'<span class="kbadge">Shortcut သင်ခန်းစာ</span>':''}
+        <h4 class="err">${esc(c.error)}</h4>
+        <div class="meta"><span class="pill${c.done?' ok':''}">${c.done?'✅ Done':'⏳ မပြီးသေး'}</span>${(c.count||1)>1?`<span class="pill">ကြုံဖူး ×${c.count}</span>`:''}${c.ai?'<span class="pill ok">Solution ရှိ</span>':''}${imgs.length?`<span class="pill">ပုံ ${imgs.length}</span>`:''}</div>
       </div>
-      ${c.ai?`<button class="solbtn" data-act="view" data-id="${c.id}">ဖုန်း Solution ကြည့်ရန် ›</button>`:''}
+      <div class="cact">
+        <button data-act="edit" data-id="${c.id}">ပြင်</button>
+        <button class="danger" data-act="del" data-id="${c.id}">ဖျက်</button>
+      </div>
+    </div>
+    ${L&&c.title?`<p class="ltitle">${esc(c.title)}</p>`:''}
+    <div class="fields">
+      ${fld(L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',c.diag&&br(c.diag))}
+      ${fld('IC',c.ics&&icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join(''))}
+      ${fld(L?'အထူးသတိထားရန်':'ပြင်နည်း',c.fix&&br(c.fix))}
+      ${fld('တူတဲ့ Model / Platform',c.applies&&esc(c.applies))}
+      ${fld('ဆရာ / Source',c.source&&esc(c.source))}
+    </div>
+    ${c.note&&L?`<button class="sm" data-act="note" data-id="${c.id}">မူရင်းစာ အပြည့်ကြည့်</button>`:''}
+    <div class="gem">
+      <p class="gl">GEMINI — ${esc(c.model)}</p>
+      <div class="g2">
+        <button class="pri" data-act="prompt" data-id="${c.id}">Prompt ကူး</button>
+        <button data-act="imgprompt" data-id="${c.id}">ပုံ Prompt ကူး</button>
+      </div>
+      <a class="btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့် ↗</a>
+      ${c.ai?`<button class="solbtn" data-act="view" data-id="${c.id}"><span>ဖုန်း Solution ကြည့်ရန်</span><span>›</span></button>`:''}
       ${(!c.ai||openSol.has(c.id))?`<textarea data-sol="${c.id}" placeholder="Gemini အဖြေကို ဒီမှာ paste လုပ်ပါ">${esc(c.ai||'')}</textarea>
-      <div class="row" style="margin-top:8px"><button class="sm pri" data-act="savesol" data-id="${c.id}">Solution သိမ်းမယ်</button></div>`
-      :`<div class="row" style="margin-top:8px"><button class="sm" data-act="sol" data-id="${c.id}">Solution ပြင်</button></div>`}
-      <p class="gl" style="margin-top:14px">ပုံ (Gemini ထုတ်ပေးတဲ့ပုံကို save ပြီး ဒီမှာထည့်)</p>
-      <div class="thumbs">${(c.imgs||[]).map((im,i)=>`<div class="th"><button class="thimg" data-act="img" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} ကြည့်ရန်"><img src="${esc(imgSrc(im))}" alt="${esc(c.model)} ပုံ ${i+1}" loading="lazy"></button><button class="thdel" data-act="imgdel" data-id="${c.id}" data-i="${i}" aria-label="ပုံဖျက်">✕</button></div>`).join('')}
-        <label class="addimg">＋ ပုံရွေး<input type="file" accept="image/*" multiple data-imgfor="${c.id}" class="fileov" aria-label="ပုံရွေး"></label>
+      <button class="pri" data-act="savesol" data-id="${c.id}">Solution သိမ်းမယ်</button>`
+      :`<button data-act="sol" data-id="${c.id}">Solution ပြင်</button>`}
+      <p class="gl">ပုံ${imgs.length?` (${imgs.length})`:''}</p>
+      <div class="thumbs">${imgs.map((im,i)=>`<div class="th">
+          <button class="thimg" data-act="img" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} ကြည့်ရန်"><img src="${esc(imgSrc(im))}" alt="${esc(c.model)} ပုံ ${i+1}" loading="lazy"></button>
+          <div class="thbar"><button data-act="imgsave" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} Save">⬇ Save</button><button class="thdel" data-act="imgdel" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} ဖျက်">✕</button></div>
+        </div>`).join('')}
+        <label class="addimg"><b>＋</b>ပုံထည့်<input type="file" accept="image/*" multiple data-imgfor="${c.id}" class="fileov" aria-label="ပုံရွေး"></label>
       </div>
       <div class="pastezone" contenteditable="true" data-pastefor="${c.id}" role="textbox" aria-label="ပုံ paste လုပ်ရန်" inputmode="none"></div>
-      <a class="extlink" href="https://claude.ai/artifact/RuANx3xghq5xVkBADBY92z" target="_blank" rel="noopener">ပုံရွေးလို့မရရင် → Chrome မှာဖွင့်ပြီး ပုံထည့်</a>
+      ${window.claude&&claude.use?'<a class="extlink" href="https://claude.ai/artifact/RuANx3xghq5xVkBADBY92z" target="_blank" rel="noopener">ပုံရွေးလို့မရရင် → Chrome မှာဖွင့်ပြီး ပုံထည့်</a>':''}
     </div>
   </article>`;
 }
@@ -516,7 +559,7 @@ function render(){
   $('count').textContent=`(${show.length}/${cases.length})`;
   const groups=new Map();
   show.forEach(c=>{const k=mkey(c.model);if(!groups.has(k))groups.set(k,{name:c.model,items:[]});groups.get(k).items.push(c)});
-  $('list').innerHTML=show.length?[...groups.values()].map(g=>`<section class="group"><h3>${esc(g.name)} <span>${g.items.length} case · ${g.items.filter(c=>c.ai).length} solution</span></h3><div class="list">${g.items.map(card).join('')}</div></section>`).join('')
+  $('list').innerHTML=show.length?[...groups.values()].map(g=>`<section class="group"><h3><span class="gname">${esc(g.name)}</span><span>${g.items.length} case · ${g.items.filter(c=>c.ai).length} solution</span></h3><div class="list">${g.items.map(card).join('')}</div></section>`).join('')
     :`<div class="empty">${cases.length?'ရှာတာနဲ့ ကိုက်တဲ့ case မရှိပါ':'Case မရှိသေးပါ — အပေါ်မှာ note ထည့်ပါ'}</div>`;
   document.querySelectorAll('textarea[data-sol]').forEach(t=>{if(drafts[t.dataset.sol]!==undefined)t.value=drafts[t.dataset.sol];if(t.dataset.sol===focusId)t.focus({preventScroll:true})});
 }
@@ -641,7 +684,22 @@ $('bkImport').onclick=async()=>{
   try{const r=await addMany(list.map(c=>({...c,id:undefined})),false);$('bkIn').value='';toast(`အသစ် ${r.added} ခု ထည့်ပြီ၊ ရှိပြီးသား ${r.dup} ခု`)}catch(e){toast('ထည့်မရပါ')}
 };
 let viewCase=null;
-const closeView=()=>{$('viewer').classList.remove('on');document.body.classList.remove('lock')};
+const closeView=()=>{$('viewer').classList.remove('on','img');document.body.classList.remove('lock')};
+const openView=(title,sub,isImg)=>{$('vTitle').innerHTML=`${esc(title)}<span class="vsub">${esc(sub)}</span>`;$('vSave').hidden=!isImg;$('vCopy').hidden=!!isImg;
+  $('viewer').classList.toggle('img',!!isImg);$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()};
+async function saveImg(c,i){
+  const im=(c.imgs||[])[i];const src=imgSrc(im);if(!src)return;
+  try{
+    const blob=await (await fetch(src)).blob();
+    const ext=((blob.type||'image/jpeg').split('/')[1]||'jpg').replace('jpeg','jpg');
+    const fname=`${c.model}-${c.error}-${i+1}`.replace(/[\\/:*?"<>|\s]+/g,'_')+'.'+ext;
+    const file=new File([blob],fname,{type:blob.type||'image/jpeg'});
+    if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}
+    const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),5000);toast('ပုံ Save ပြီး — Gallery / Download ထဲမှာ ကြည့်ပါ');
+  }catch(e){if(e&&e.name==='AbortError')return;toast('Save မရပါ — ပုံကို ဖိထားပြီး "Download image" နှိပ်ပါ')}
+}
+$('vSave').onclick=()=>{if(viewCase&&viewCase.c)saveImg(viewCase.c,viewCase.i)};
 $('vClose').onclick=closeView;
 $('vCopy').onclick=()=>{if(viewCase&&viewCase.text)copy(viewCase.text);else toast('ပုံကို ဖိထားပြီး save လုပ်ပါ')};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('viewer').classList.contains('on'))closeView()});
@@ -653,21 +711,22 @@ $('list').addEventListener('click',async e=>{
   const a=b.dataset.act;
   if(a==='prompt')copy(promptText(c));
   else if(a==='imgprompt'){copy(imagePrompt(c));if(!c.ai)toast('Solution မထည့်ရသေးလို့ case အချက်အလက်နဲ့ ကူးထားတယ်')}
-  else if(a==='img'){const im=(c.imgs||[])[+b.dataset.i];if(!im)return;viewCase={text:''};$('vTitle').innerHTML=`${esc(c.model)}<span class="vsub">${esc(c.error)} — ပုံ ${+b.dataset.i+1}/${c.imgs.length}</span>`;
-    $('vBody').innerHTML=`<img src="${esc(imgSrc(im))}" alt="${esc(c.model)} ပုံ">`;$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()}
+  else if(a==='img'){const i=+b.dataset.i,im=(c.imgs||[])[i];if(!im)return;viewCase={text:'',c,i};
+    $('vBody').innerHTML=`<img src="${esc(imgSrc(im))}" alt="${esc(c.model)} ပုံ">`;openView(c.model,`${c.error} — ပုံ ${i+1}/${c.imgs.length}`,true)}
+  else if(a==='imgsave')saveImg(c,+b.dataset.i);
   else if(a==='imgdel'){
     if(b.dataset.sure){const i=+b.dataset.i;const im=(c.imgs||[])[i];const imgs=(c.imgs||[]).filter((_,j)=>j!==i);
       try{await put({...c,imgs});if(im&&im.id&&assets){try{await assets.delete(im.id)}catch(e){}}toast('ပုံဖျက်ပြီး');if(mode!=='db')render()}catch(x){toast('ဖျက်မရပါ')}}
-    else{b.dataset.sure='1';b.textContent='?';b.style.background='var(--red)';setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='✕';b.style.background=''}},3000);toast('ဖျက်ဖို့ ထပ်နှိပ်ပါ')}
+    else{b.dataset.sure='1';b.textContent='ဖျက်?';b.classList.add('sure');setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='✕';b.classList.remove('sure')}},3000);toast('ပုံဖျက်ဖို့ ထပ်နှိပ်ပါ')}
   }
   else if(a==='savesol'){const t=document.querySelector(`textarea[data-sol="${c.id}"]`);const v=t?fixMM(t.value).text.trim():'';if(!v)return toast('Gemini အဖြေကို paste လုပ်ပါ');
     try{openSol.delete(c.id);if(t)t.value='';await put({...c,ai:v});toast(`Solution ကို ${c.model} အောက်မှာ သိမ်းပြီ`);if(mode!=='db')render()}catch(x){toast('သိမ်းမရပါ')}}
-  else if(a==='view'||a==='note'){const isNote=a==='note';viewCase={text:isNote?c.note:c.ai};$('vTitle').innerHTML=`${esc(c.model)}<span class="vsub">${esc(c.error)} — ${isNote?'မူရင်းစာ':'ဖုန်း Solution'}</span>`;$('vBody').textContent=viewCase.text||'';$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()}
+  else if(a==='view'||a==='note'){const isNote=a==='note';viewCase={text:isNote?c.note:c.ai};$('vBody').textContent=viewCase.text||'';openView(c.model,`${c.error} — ${isNote?'မူရင်းစာ':'ဖုန်း Solution'}`,false)}
   else if(a==='sol'){openSol.add(c.id);render();const t=document.querySelector(`textarea[data-sol="${c.id}"]`);if(t)t.focus()}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
   else if(a==='del'){
     if(b.dataset.sure){try{await del(c.id);if($('eid').value===c.id)fill({});toast('ဖျက်ပြီး')}catch(x){toast('ဖျက်မရပါ')}}
-    else{b.dataset.sure='1';b.textContent='သေချာလား? ထပ်နှိပ်';b.style.color='var(--red)';setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='ဖျက်';b.style.color=''}},3000)}
+    else{b.dataset.sure='1';b.textContent='သေချာလား?';b.style.background='var(--red)';b.style.color='#fff';setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='ဖျက်';b.style.background='';b.style.color=''}},3000);toast('ဖျက်ဖို့ ထပ်နှိပ်ပါ')}
   }
 });
 
