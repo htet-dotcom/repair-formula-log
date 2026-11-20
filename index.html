@@ -68,9 +68,14 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .case p{margin:4px 0;font-size:15px}.case .k{color:var(--mute);font-size:13px;display:block}
 .tag{display:inline-block;font-size:13px;font-weight:600;border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;background:var(--bg)}
 .done{color:var(--ok)}
-.sol{margin-top:10px;border-top:1px solid var(--line)}
-.sol summary{color:var(--ok)}
-.soltext{white-space:pre-wrap;font-size:15px;max-height:360px;overflow:auto;background:var(--bg);border-radius:10px;padding:10px;margin:0 0 8px}
+.solbtn{width:100%;margin-top:10px;justify-content:space-between;border-color:var(--ok);color:var(--ok)}
+.viewer{position:fixed;inset:0;z-index:20;background:var(--card);color:var(--ink);display:none;flex-direction:column}
+.viewer.on{display:flex}
+.vhead{display:flex;gap:10px;align-items:center;padding:12px max(4vw,14px);border-bottom:1px solid var(--line);background:var(--panel);color:var(--panelInk)}
+.vhead h2{font-size:18px;flex:1}.vhead .vsub{display:block;color:#ff6b61;font:600 14px Inter,"Noto Sans Myanmar",sans-serif}
+.vhead button{border-color:#f2f4f5;color:#f2f4f5}
+.vbody{flex:1;overflow:auto;padding:18px max(4vw,14px) 40px;white-space:pre-wrap;font-size:17px;line-height:1.75;max-width:900px;width:100%;margin:0 auto;overflow-wrap:anywhere}
+body.lock{overflow:hidden}
 .nosol{font-size:13px;color:var(--mute);margin-top:8px}
 .empty{color:var(--mute);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:14px}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
@@ -141,6 +146,15 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
   <div id="list"></div>
 </section>
 
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="vTitle">
+  <div class="vhead">
+    <h2 id="vTitle"></h2>
+    <button class="sm" id="vCopy">ကူး</button>
+    <button class="sm" id="vClose" aria-label="ပိတ်">✕ ပိတ်</button>
+  </div>
+  <div class="vbody" id="vBody"></div>
+</div>
+
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -181,10 +195,13 @@ function promptText(o){
   L.push('',`Shortcut formula: ${formulaText(o)}`,'','Please:');
   if(o.done)L.push(`1. Explain why this fault happens on the ${o.model} and which circuit section (block) is involved.`);
   else L.push(`1. Give a step-by-step troubleshooting order for "${o.error}" on the ${o.model}, most likely cause first.`);
-  L.push(`2. For ${ics}: function, location on the board, key pins/lines, and normal voltage or diode-mode values to check.`,
-  '3. Other common causes of the same fault on this model and its sister models (same CPU/PMIC).',
-  `4. Find resources: schematic / boardview names (e.g. ZXW, Borneo, Pragma, WuXinJi), GSM-Forum or repair forum threads, and YouTube videos. Give search keywords like "${o.model} ${o.error} solution".`,
-  '5. Replacement / compatible part numbers and soldering or reball tips.','',
+  L.push(`2. For ${ics}: function, location on the board, and the key pins / lines / test points.`,
+  `3. DIODE MODE MEASUREMENT table (multimeter on diode mode, power off, battery removed): for each key line, rail, capacitor or test point related to "${o.error}" and ${ics}, give the normal diode value in both directions (red probe on ground, black probe on the point; and reversed), plus what a short (0.000), OL or abnormal value means.`,
+  `4. VOLTAGE MEASUREMENT table (battery / DC power supply connected): for each key rail (VBAT, VPH_PWR / VSYS, VBUS, buck and LDO outputs, IC supply pins, enable / clock / reset lines), give the expected voltage in each state (standby, power key pressed, booting, charging), the DC power supply current draw to expect at each stage, and what an abnormal reading points to.`,
+  '5. Other common causes of the same fault on this model and its sister models (same CPU/PMIC).',
+  `6. Find resources: schematic / boardview names (e.g. ZXW, Borneo, Pragma, WuXinJi), GSM-Forum or repair forum threads, and YouTube videos. Give search keywords like "${o.model} ${o.error} solution".`,
+  '7. Replacement / compatible part numbers and soldering or reball tips.','',
+  'Present the diode and voltage values as tables (Point | Normal value | Abnormal → meaning). If an exact value is not known for this model, say so and give the typical value for the same PMIC/CPU instead of guessing.','',
   my?'Answer in Burmese (မြန်မာဘာသာ), keep IC names, pin names and technical terms in English.':'Answer in clear English.');
   return L.join('\n');
 }
@@ -257,7 +274,7 @@ function card(c){
       <button class="sm" data-act="edit" data-id="${c.id}">ပြင်</button>
       <button class="sm" data-act="del" data-id="${c.id}">ဖျက်</button>
     </div>
-    ${c.ai?`<details class="sol"><summary>ဖုန်း Solution ကြည့်ရန်</summary><div class="soltext">${esc(c.ai)}</div><button class="sm" data-act="copyai" data-id="${c.id}">Solution ကူး</button></details>`:'<p class="nosol">Solution မထည့်ရသေး</p>'}
+    ${c.ai?`<button class="solbtn" data-act="view" data-id="${c.id}">ဖုန်း Solution ကြည့်ရန် ›</button>`:'<p class="nosol">Solution မထည့်ရသေး</p>'}
   </article>`;
 }
 function render(){
@@ -305,13 +322,18 @@ $('saveSol').onclick=async()=>{
   o.ai=$('ai').value.trim();if(!o.ai)return toast('Gemini အဖြေကို paste လုပ်ပါ');
   try{await put(o);toast(`Solution ကို ${o.model} အောက်မှာ သိမ်းပြီး`)}catch(x){toast('သိမ်းမရပါ')}
 };
+let viewCase=null;
+const closeView=()=>{$('viewer').classList.remove('on');document.body.classList.remove('lock')};
+$('vClose').onclick=closeView;
+$('vCopy').onclick=()=>{if(viewCase)copy(viewCase.ai||'')};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('viewer').classList.contains('on'))closeView()});
 $('q').addEventListener('input',e=>{filter=e.target.value;render()});
 $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(!b)return;chip=b.dataset.chip;render()});
 $('list').addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const c=cases.find(x=>x.id===b.dataset.id);if(!c)return;
   const a=b.dataset.act;
   if(a==='prompt'){fill(c);copy(promptText(c))}
-  else if(a==='copyai')copy(c.ai||'');
+  else if(a==='view'){viewCase=c;$('vTitle').innerHTML=`${esc(c.model)}<span class="vsub">${esc(c.error)} — ဖုန်း Solution</span>`;$('vBody').textContent=c.ai||'';$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()}
   else if(a==='sol'){fill(c);$('ai').scrollIntoView({behavior:'smooth',block:'center'});$('ai').focus({preventScroll:true})}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
   else if(a==='del'){
