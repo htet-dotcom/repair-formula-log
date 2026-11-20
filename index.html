@@ -240,7 +240,7 @@ function ruleParse(block){
 }
 async function aiParse(note){
   const instr=`You split a mobile phone motherboard repair technician's notes (Burmese mixed with English) into structured cases.
-Notes may hold one or several cases (often separated by blank lines; each starts with a phone model).
+Notes may hold one or several cases (often separated by blank lines; each starts with a phone model). A single line like "Realme C3 Frp" is also a case. Ignore shop advertising, addresses and phone numbers.
 For each case return:
 - model: phone model only, cleaned (e.g. "Redmi Note 12 Pro", "Redmi 10 (2022)")
 - error: the fault in short English (e.g. "Baseband Unknown", "No power", "Charging error", "Radio Off")
@@ -248,7 +248,7 @@ For each case return:
 - ics: comma-separated IC / part names involved (e.g. "MT6190M, CPU")
 - fix: what was done to repair it, keep Burmese wording, one step per line
 - done: true if it was fixed (Done, ✅, OK), else false
-Do not invent anything not in the notes; leave a field "" if missing.
+diag must not just repeat an IC name. Do not invent anything not in the notes; leave a field "" if missing.
 Reply with JSON only: {"cases":[{"model":"","error":"","diag":"","ics":"","fix":"","done":true}]}
 
 NOTES:
@@ -354,15 +354,36 @@ async function addMany(list,bump=true){
   for(const o of list){
     const old=pool.find(c=>sameCase(c,o));
     let saved;
+    try{
     if(old){
       const ics=[...new Set([...icList(old.ics),...icList(o.ics)])].join(', ');
       const diag=[old.diag,o.diag].filter(Boolean).filter((v,i,a)=>a.findIndex(x=>norm(x)===norm(v))===i).join('\n');
       saved=await put({...old,ics,diag,done:old.done||o.done,ai:old.ai||o.ai,count:(old.count||1)+(bump?1:0)});dup++;
       Object.assign(old,saved);
     }else{saved=await put({...o,count:o.count||1});pool.push({...saved});added++}
+    }catch(e){continue}
     first=first||saved;
   }
+  if(!first)throw new Error('save failed');
   return{added,dup,first};
+}
+/* merge duplicates already in the log (once per open) */
+let cleaned=false;
+async function cleanup(){
+  if(cleaned||mode!=='db')return;cleaned=true;
+  const left=[...cases].sort((a,b)=>(a.created||0)-(b.created||0));let n=0;
+  while(left.length){
+    const a=left.shift();const same=left.filter(b=>sameCase(a,b));if(!same.length)continue;
+    same.forEach(b=>left.splice(left.indexOf(b),1));
+    const all=[a,...same];const keep=all.find(c=>c.ai)||a;
+    const ics=[...new Set(all.flatMap(c=>icList(c.ics)))].join(', ');
+    const diag=all.map(c=>c.diag).filter(Boolean).filter(d=>!icList(ics).some(i=>norm(i)===norm(d))).filter((v,i,arr)=>arr.findIndex(x=>norm(x)===norm(v))===i).join('\n');
+    try{
+      await put({...keep,ics,diag,done:all.some(c=>c.done),ai:keep.ai||all.map(c=>c.ai).find(Boolean),count:Math.max(...all.map(c=>c.count||1))});
+      for(const c of all)if(c.id!==keep.id)await del(c.id);n+=all.length-1;
+    }catch(e){}
+  }
+  if(n)toast(`တူနေတဲ့ case ${n} ခု ပေါင်းလိုက်ပြီ`);
 }
 $('f').addEventListener('submit',async e=>{
   e.preventDefault();const o=current();if(!o.model)return toast('Model ထည့်ပါ');
@@ -408,7 +429,7 @@ if(window.claude&&claude.use){
     db.collection('cases').onSnapshot(snap=>{
       if(mode!=='db')showAccount();clearTimeout(timer);mode='db';$('store').textContent='Online မှတ်တမ်း — ဘယ်ဖုန်းကဖွင့်ဖွင့် ပြန်ရှာလို့ရ';
       const docs=snap.docs||snap||[];
-      cases=docs.map(x=>({id:x.id,...(typeof x.data==='function'?x.data():(x.data||{}))}));render();
+      cases=docs.map(x=>({id:x.id,...(typeof x.data==='function'?x.data():(x.data||{}))}));render();if(!cleaned)setTimeout(cleanup,800);
     },()=>{clearTimeout(timer);useLocal('Online မချိတ်ရ — browser ထဲမှာ သိမ်းထားပါတယ်')});
   }).catch(()=>{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')});
 }else{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')}
