@@ -366,7 +366,7 @@ async function del(id){
 }
 
 /* ---- Google Drive sync (GitHub Pages / outside Claude) ---- */
-const GD_CLIENT_ID='';   /* Google Cloud OAuth Web client ID — ဒီမှာထည့်ရင် ဖုန်းတိုင်းမှာ ထပ်ထည့်စရာမလို */
+const GD_CLIENT_ID='1025460686434-4atf2mju3bufeich7dsni1tjobglvcm0.apps.googleusercontent.com';   /* Google Cloud OAuth Web client ID — ဒီမှာထည့်ရင် ဖုန်းတိုင်းမှာ ထပ်ထည့်စရာမလို */
 const GD_FILE='repair-formula-log.json',GD_API='https://www.googleapis.com';
 const DK=LK+'_deleted';
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
