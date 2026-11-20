@@ -56,6 +56,13 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .sync::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--mute)}
 .sync.ok::before{background:var(--ok)}.sync.off::before{background:var(--red)}
 .seen{font-size:13px;font-weight:600;color:var(--mute);margin-left:6px}
+.lab2{font-size:14px;font-weight:600;color:var(--mute)}
+#lang{min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 10px;font:15px Inter,"Noto Sans Myanmar",sans-serif}
+.gem{margin-top:12px;padding:12px;border-radius:12px;background:var(--panel);color:var(--panelInk)}
+.gem .gl{font-size:13px;color:#9aa5ae;margin:0 0 8px}
+.gem button,.gem a.btn{border-color:#f2f4f5;color:#f2f4f5}.gem button.pri{border-color:var(--red);color:#fff}
+.gem textarea{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:110px;margin-top:10px}
+.gem .solbtn{border-color:#4cc985;color:#4cc985;margin-top:10px}
 .status{font-size:13px;color:var(--mute);margin:8px 0 0}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
@@ -119,25 +126,11 @@ body.lock{overflow:hidden}
       <p class="status" id="store">မှတ်တမ်း ချိတ်ဆက်နေသည်…</p>
     </section>
 
-    <section class="panel" aria-label="Formula, Gemini prompt and solution">
+    <section class="panel" aria-label="Shortcut formula">
       <p class="lab">Shortcut formula</p>
       <div class="formula" id="formula"></div>
       <button class="sm" id="copyF">Formula ကူး</button>
-      <hr>
-      <div class="step"><span class="num">2</span><h2>Gemini prompt</h2>
-        <select id="lang" aria-label="Answer language" style="margin-left:auto"><option value="my">မြန်မာလို</option><option value="en">English</option></select></div>
-      <div class="prompt" id="prompt"></div>
-      <div class="row">
-        <button class="pri" id="copyP">Prompt ကူး</button>
-        <a class="btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့်</a>
-      </div>
-      <hr>
-      <div class="step"><span class="num">3</span><h2>ဖုန်း Solution (Gemini အဖြေ)</h2></div>
-      <textarea id="ai" placeholder="Gemini ပြန်ပေးတဲ့အဖြေကို ဒီမှာ paste လုပ်ပါ"></textarea>
-      <div class="row" style="margin-top:10px">
-        <button class="pri" id="saveSol">Solution သိမ်းမယ်</button>
-      </div>
-      <p class="lab" style="margin-top:8px" id="solFor">Note ခွဲပြီးမှ Solution သိမ်းလို့ရမယ်</p>
+      <p class="lab" style="margin-top:14px">Gemini prompt နဲ့ Solution က အောက်က case တစ်ခုချင်းစီ (ဖုန်း Model / Error) အောက်မှာ ရှိတယ်</p>
     </section>
   </div>
 </main>
@@ -145,6 +138,7 @@ body.lock{overflow:hidden}
 <section class="band" aria-labelledby="lh">
   <h2 id="lh">Model အလိုက် Case များ <span id="count" style="color:var(--mute);font-weight:500"></span></h2>
   <div class="search">
+    <div class="row" style="margin-bottom:8px"><span class="lab2">Gemini အဖြေ ဘာသာ</span><select id="lang" aria-label="Answer language"><option value="my">မြန်မာလို</option><option value="en">English</option></select></div>
     <input id="q" type="search" placeholder="ရှာရန်: model, error, IC, solution (ဥပမာ 12R, PM7250B)">
     <div class="chips" id="chips"></div>
   </div>
@@ -187,8 +181,7 @@ const mkey=m=>String(m||'').toLowerCase().replace(/[\s()\-_]+/g,'');
 
 function read(){const o={};F.forEach(k=>o[k]=$(k).value.trim());o.done=$('done').checked;return o}
 function current(){const id=$('eid').value;const c=cases.find(x=>x.id===id)||{};return{...c,...read(),id:id||undefined}}
-function fill(o){F.forEach(k=>$(k).value=o[k]||'');$('done').checked=o.done!==false;$('eid').value=o.id||'';$('ai').value=o.ai||'';
-  $('solFor').textContent=o.id?`Solution ကို "${o.model} — ${o.error}" အောက်မှာ သိမ်းမယ်`:'Note ခွဲပြီးမှ Solution သိမ်းလို့ရမယ်';draw()}
+function fill(o){F.forEach(k=>$(k).value=o[k]||'');$('done').checked=o.done!==false;$('eid').value=o.id||'';draw()}
 
 function formulaText(o){
   const p=[o.model,o.error,o.diag&&o.diag.split('\n')[0],icList(o.ics).join(' + '),o.fix&&o.fix.split('\n').join(' / ')].filter(Boolean);
@@ -220,7 +213,7 @@ function promptText(o){
   my?'Answer in Burmese (မြန်မာဘာသာ), keep IC names, pin names and technical terms in English.':'Answer in clear English.');
   return L.join('\n');
 }
-function draw(){const o=read();$('formula').innerHTML=formulaHTML(o);$('prompt').textContent=promptText(o)}
+function draw(){$('formula').innerHTML=formulaHTML(read())}
 
 /* ---- splitting notes: Claude first, simple rules as fallback ---- */
 function ruleParse(block){
@@ -293,15 +286,26 @@ function card(c){
     ${c.ics?`<p><span class="k">IC</span>${icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join('')}</p>`:''}
     ${c.fix?`<p><span class="k">ပြင်နည်း</span>${esc(c.fix).replace(/\n/g,'<br>')}</p>`:''}
     <div class="row" style="margin-top:10px">
-      <button class="sm" data-act="prompt" data-id="${c.id}">Prompt ကူး</button>
-      <button class="sm" data-act="sol" data-id="${c.id}">${c.ai?'Solution ပြင်':'Solution ထည့်'}</button>
       <button class="sm" data-act="edit" data-id="${c.id}">ပြင်</button>
       <button class="sm" data-act="del" data-id="${c.id}">ဖျက်</button>
     </div>
-    ${c.ai?`<button class="solbtn" data-act="view" data-id="${c.id}">ဖုန်း Solution ကြည့်ရန် ›</button>`:'<p class="nosol">Solution မထည့်ရသေး</p>'}
+    <div class="gem">
+      <p class="gl">Gemini — ${esc(c.model)} · ${esc(c.error)}</p>
+      <div class="row">
+        <button class="sm pri" data-act="prompt" data-id="${c.id}">Prompt ကူး</button>
+        <a class="btn" style="min-height:36px;font-size:14px;padding:0 12px" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့်</a>
+      </div>
+      ${c.ai?`<button class="solbtn" data-act="view" data-id="${c.id}">ဖုန်း Solution ကြည့်ရန် ›</button>`:''}
+      ${(!c.ai||openSol.has(c.id))?`<textarea data-sol="${c.id}" placeholder="Gemini အဖြေကို ဒီမှာ paste လုပ်ပါ">${esc(c.ai||'')}</textarea>
+      <div class="row" style="margin-top:8px"><button class="sm pri" data-act="savesol" data-id="${c.id}">Solution သိမ်းမယ်</button></div>`
+      :`<div class="row" style="margin-top:8px"><button class="sm" data-act="sol" data-id="${c.id}">Solution ပြင်</button></div>`}
+    </div>
   </article>`;
 }
+const openSol=new Set();
 function render(){
+  const drafts={};let focusId=null;
+  document.querySelectorAll('textarea[data-sol]').forEach(t=>{drafts[t.dataset.sol]=t.value;if(document.activeElement===t)focusId=t.dataset.sol});
   cases.sort((a,b)=>(b.created||0)-(a.created||0));
   const errs=[...new Set(cases.map(c=>(c.error||'').replace(/error/i,'').trim()).filter(Boolean))];
   $('chips').innerHTML=['',...errs].map(e=>`<button class="chip ${chip===e?'on':''}" data-chip="${esc(e)}">${e?esc(e):'အားလုံး'}</button>`).join('');
@@ -312,13 +316,13 @@ function render(){
   show.forEach(c=>{const k=mkey(c.model);if(!groups.has(k))groups.set(k,{name:c.model,items:[]});groups.get(k).items.push(c)});
   $('list').innerHTML=show.length?[...groups.values()].map(g=>`<section class="group"><h3>${esc(g.name)} <span>${g.items.length} case · ${g.items.filter(c=>c.ai).length} solution</span></h3><div class="list">${g.items.map(card).join('')}</div></section>`).join('')
     :`<div class="empty">${cases.length?'ရှာတာနဲ့ ကိုက်တဲ့ case မရှိပါ':'Case မရှိသေးပါ — အပေါ်မှာ note ထည့်ပါ'}</div>`;
+  document.querySelectorAll('textarea[data-sol]').forEach(t=>{if(drafts[t.dataset.sol]!==undefined)t.value=drafts[t.dataset.sol];if(t.dataset.sol===focusId)t.focus({preventScroll:true})});
 }
 
 /* ---- events ---- */
 F.forEach(k=>$(k).addEventListener('input',draw));
-$('done').addEventListener('change',draw);$('lang').addEventListener('change',draw);
+$('done').addEventListener('change',draw);
 $('copyF').onclick=()=>{const o=read();o.model?copy(formulaText(o)):toast('Note အရင်ထည့်ပါ')};
-$('copyP').onclick=()=>{const o=read();o.model&&o.error?copy(promptText(o)):toast('Note အရင်ထည့်ပြီး ခွဲပါ')};
 $('newBtn').onclick=()=>{fill({});$('note').value='';$('fieldsBox').open=false;$('note').focus()};
 
 $('splitBtn').onclick=async()=>{
@@ -393,11 +397,6 @@ $('f').addEventListener('submit',async e=>{
   e.preventDefault();const o=current();if(!o.model)return toast('Model ထည့်ပါ');
   try{fill(await put(o));toast('Save ပြီးပါပြီ')}catch(x){toast('သိမ်းမရပါ')}
 });
-$('saveSol').onclick=async()=>{
-  const o=current();if(!o.id)return toast('Note အရင်ခွဲပါ (ဒါမှမဟုတ် case တစ်ခုရဲ့ "Solution ထည့်" ကိုနှိပ်ပါ)');
-  o.ai=$('ai').value.trim();if(!o.ai)return toast('Gemini အဖြေကို paste လုပ်ပါ');
-  try{await put(o);toast(`Solution ကို ${o.model} အောက်မှာ သိမ်းပြီး`)}catch(x){toast('သိမ်းမရပါ')}
-};
 $('bkCopy').onclick=()=>{if(!cases.length)return toast('Data မရှိသေးပါ');copy(JSON.stringify({app:'repair-formula-log',at:new Date().toISOString(),cases:cases.map(({id,...c})=>c)}))};
 $('bkImport').onclick=async()=>{
   let list;try{const j=JSON.parse($('bkIn').value);list=(j.cases||j).filter(c=>c&&c.model)}catch(e){return toast('Backup စာသား မမှန်ပါ')}
@@ -413,9 +412,11 @@ $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');
 $('list').addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const c=cases.find(x=>x.id===b.dataset.id);if(!c)return;
   const a=b.dataset.act;
-  if(a==='prompt'){fill(c);copy(promptText(c))}
+  if(a==='prompt')copy(promptText(c));
+  else if(a==='savesol'){const t=document.querySelector(`textarea[data-sol="${c.id}"]`);const v=t?t.value.trim():'';if(!v)return toast('Gemini အဖြေကို paste လုပ်ပါ');
+    try{openSol.delete(c.id);if(t)t.value='';await put({...c,ai:v});toast(`Solution ကို ${c.model} အောက်မှာ သိမ်းပြီ`);if(mode!=='db')render()}catch(x){toast('သိမ်းမရပါ')}}
   else if(a==='view'){viewCase=c;$('vTitle').innerHTML=`${esc(c.model)}<span class="vsub">${esc(c.error)} — ဖုန်း Solution</span>`;$('vBody').textContent=c.ai||'';$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()}
-  else if(a==='sol'){fill(c);$('ai').scrollIntoView({behavior:'smooth',block:'center'});$('ai').focus({preventScroll:true})}
+  else if(a==='sol'){openSol.add(c.id);render();const t=document.querySelector(`textarea[data-sol="${c.id}"]`);if(t)t.focus()}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
   else if(a==='del'){
     if(b.dataset.sure){try{await del(c.id);if($('eid').value===c.id)fill({});toast('ဖျက်ပြီး')}catch(x){toast('ဖျက်မရပါ')}}
