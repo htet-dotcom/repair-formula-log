@@ -8,10 +8,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&family=Noto+Sans+Myanmar:wght@400;600&display=swap" rel="stylesheet">
 <style>
 /* VOICE: a technician's bench log — fast, exact, no decoration
-   IDEA: the job ticket clipped to a repair bench: model ▸ fault ▸ reading ▸ IC ▸ fix
-   PICTURE: a dark readout panel that builds the shortcut formula live as you type
+   IDEA: the job ticket clipped to a repair bench: note in → formula, prompt, solution out
+   PICTURE: a dark readout panel holding the formula, the Gemini prompt and the solution box
    COLOUR and TYPE: steel panel, black ink, white, alarm red; Inter Tight + Inter + Noto Sans Myanmar
-   LAYOUT: one column on phones; form left / readout right above 900px; saved list below */
+   LAYOUT: numbered steps in one column on phones; note left / readout right above 900px; list grouped by model */
 :root{color-scheme:light dark;
 --bg:light-dark(#d5dbe0,#16191c);--card:light-dark(#fff,#1f2327);--ink:light-dark(#0d0f11,#eef1f3);
 --mute:light-dark(#4f5a63,#9aa5ae);--line:light-dark(#b9c2c9,#2e353b);--red:#e8251a;--ok:light-dark(#0a7a3d,#4cc985);
@@ -19,129 +19,126 @@
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,"Noto Sans Myanmar",system-ui,sans-serif;overflow-x:clip}
-h1,h2{font-family:"Inter Tight","Noto Sans Myanmar",sans-serif;line-height:1.1;margin:0;text-wrap:balance}
-h1{font-size:clamp(28px,5vw,40px)}h2{font-size:20px}
-.band{padding:clamp(18px,3vw,40px) max(4vw,14px);max-width:1240px;margin:0 auto}
-header.band{padding-bottom:8px}
+h1,h2,h3{font-family:"Inter Tight","Noto Sans Myanmar",sans-serif;line-height:1.15;margin:0;text-wrap:balance}
+h1{font-size:clamp(26px,5vw,40px)}h2{font-size:19px}
+.band{padding:clamp(16px,3vw,36px) max(4vw,14px);max-width:1240px;margin:0 auto}
+header.band{padding-bottom:6px}
 .sub{color:var(--mute);margin:6px 0 0;font-size:15px}
-.grid{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
-@media(min-width:900px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.step{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font:700 14px Inter}
 label{display:block;font-size:14px;font-weight:600;margin:12px 0 4px}
-input,textarea,select{width:100%;font:16px/1.5 Inter,"Noto Sans Myanmar",sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-textarea{min-height:76px;resize:vertical}
-input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid var(--red);outline-offset:1px}
+input,textarea{width:100%;font:16px/1.5 Inter,"Noto Sans Myanmar",sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:72px;resize:vertical}
+#note{min-height:170px}
+input:focus,textarea:focus,button:focus-visible,a:focus-visible,select:focus-visible{outline:3px solid var(--red);outline-offset:1px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 button,.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--ink);background:transparent;color:var(--ink);font:600 15px Inter,"Noto Sans Myanmar",sans-serif;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none}
 button.pri{background:var(--red);border-color:var(--red);color:#fff}
+button:disabled{opacity:.5;cursor:wait}
 button.sm{min-height:36px;padding:0 12px;font-size:14px}
 .chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:600}.chk input{width:22px;height:22px}
-.panel{background:var(--panel);color:var(--panelInk);border-radius:14px;padding:18px;border:1px solid #000}
-.panel .lab{font-size:13px;color:#9aa5ae;margin:0 0 6px}
-.formula{font:600 clamp(17px,2.6vw,22px)/1.45 "Inter Tight","Noto Sans Myanmar",sans-serif;word-break:break-word;min-height:64px}
+details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.panel{background:var(--panel);color:var(--panelInk);border-radius:14px;padding:16px;border:1px solid #000}
+.panel .num{background:#f2f4f5;color:#0d0f11}
+.panel .lab{font-size:13px;color:#9aa5ae;margin:0}
+.formula{font:600 clamp(17px,2.6vw,21px)/1.45 "Inter Tight","Noto Sans Myanmar",sans-serif;word-break:break-word;min-height:56px;margin:4px 0 8px}
 .formula .sep{color:var(--red);padding:0 4px}
 .formula .ic{background:#2b3137;border-radius:6px;padding:0 6px;white-space:nowrap}
-.prompt{background:#1a1e22;color:#dfe5e9;border:1px solid #2e353b;border-radius:10px;padding:12px;font:14px/1.55 Inter,"Noto Sans Myanmar",sans-serif;white-space:pre-wrap;max-height:300px;overflow:auto;margin:10px 0}
-.panel button{border-color:#f2f4f5;color:#f2f4f5}.panel button.pri{border-color:var(--red);color:#fff}
-.panel a.btn{border-color:#f2f4f5;color:#f2f4f5}
-.panel select{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;width:auto}
-.aibox{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:140px}
-.case details{margin-top:8px;border-top:1px solid var(--line)}
-.case .aitext{white-space:pre-wrap;font-size:15px;max-height:320px;overflow:auto;background:var(--bg);border-radius:10px;padding:10px;margin:0 0 8px}
-.status{font-size:13px;color:var(--mute);margin-top:8px}
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.prompt{background:#1a1e22;color:#dfe5e9;border:1px solid #2e353b;border-radius:10px;padding:12px;font:14px/1.55 Inter,"Noto Sans Myanmar",sans-serif;white-space:pre-wrap;max-height:180px;overflow:auto;margin:8px 0}
+.panel button,.panel a.btn{border-color:#f2f4f5;color:#f2f4f5}.panel button.pri{border-color:var(--red);color:#fff}
+.panel select{background:#1a1e22;color:#f2f4f5;border:1px solid #2e353b;border-radius:10px;min-height:36px;padding:0 8px;font:14px Inter,"Noto Sans Myanmar",sans-serif}
+.panel textarea{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:150px}
+.panel hr{border:0;border-top:1px solid #2e353b;margin:16px 0}
+.status{font-size:13px;color:var(--mute);margin:8px 0 0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 .search{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:14px;font-weight:500}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.group{margin-top:18px}
+.group>h3{font-size:20px;padding:6px 0 8px;border-bottom:2px solid var(--ink);margin-bottom:10px;display:flex;justify-content:space-between;gap:8px}
+.group>h3 span{color:var(--mute);font:500 14px Inter,"Noto Sans Myanmar",sans-serif}
 .list{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
 @media(min-width:760px){.list{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.case h3{margin:0;font:700 18px/1.3 "Inter Tight","Noto Sans Myanmar",sans-serif}
-.case .err{color:var(--red);font-weight:600;margin:2px 0 8px}
+.case .err{color:var(--red);font:700 17px/1.3 "Inter Tight","Noto Sans Myanmar",sans-serif;margin:0 0 6px}
 .case p{margin:4px 0;font-size:15px}.case .k{color:var(--mute);font-size:13px;display:block}
 .tag{display:inline-block;font-size:13px;font-weight:600;border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;background:var(--bg)}
 .done{color:var(--ok)}
+.sol{margin-top:10px;border-top:1px solid var(--line)}
+.sol summary{color:var(--ok)}
+.soltext{white-space:pre-wrap;font-size:15px;max-height:360px;overflow:auto;background:var(--bg);border-radius:10px;padding:10px;margin:0 0 8px}
+.nosol{font-size:13px;color:var(--mute);margin-top:8px}
 .empty{color:var(--mute);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:14px}
-details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
 </head>
 <body>
 <header class="band">
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
-  <p class="sub">Case ထည့် → Shortcut formula ထုတ် → Gemini prompt ကူး → နောက်မှ model / error / IC နဲ့ ပြန်ရှာ</p>
+  <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
 </header>
 
-<main class="band" style="padding-top:8px">
+<main class="band" style="padding-top:6px">
   <div class="grid">
-    <section class="card" aria-labelledby="fh">
-      <h2 id="fh">Case အသစ်</h2>
-      <details>
-        <summary>မှတ်စု paste လုပ်ပြီး auto ဖြည့်မယ်</summary>
-        <textarea id="raw" placeholder="Redmi 10(2022) No power&#10;Power key နှိပ်ရင် 0.006 ဆွဲ&#10;MT6358VW change ပေးလိုက်တော့ Done✅"></textarea>
-        <div class="row" style="margin-top:8px">
-          <button class="sm" id="parseOne">Form ထဲဖြည့်</button>
-          <button class="sm" id="parseBulk">အများကြီး တခါတည်း Save (blank line ခြား)</button>
-        </div>
+    <section class="card" aria-labelledby="nh">
+      <div class="step"><span class="num">1</span><h2 id="nh">Note ထည့်</h2></div>
+      <textarea id="note" placeholder="Redmi 10(2022) No power&#10;Power key နှိပ်ရင် 0.006 ဝန်းကျင် ဆွဲ&#10;MT6358VW change ပေးလိုက်တော့ Done✅"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="pri" id="splitBtn">ခွဲပြီး သိမ်းမယ်</button>
+        <button id="newBtn">Case အသစ်</button>
+      </div>
+      <p class="status">Case အများကြီးဆို blank line တစ်ကြောင်းခြားပြီး တခါတည်းထည့်လို့ရ</p>
+
+      <details id="fieldsBox" style="margin-top:10px">
+        <summary>ခွဲထားတာ စစ်ရန် / ပြင်ရန်</summary>
+        <form id="f" autocomplete="off">
+          <input type="hidden" id="eid">
+          <label for="model">ဖုန်း Model</label><input id="model">
+          <label for="error">Error</label><input id="error">
+          <label for="diag">စစ်ဆေးချက်</label><textarea id="diag"></textarea>
+          <label for="ics">ပါဝင်တဲ့ IC</label><input id="ics">
+          <label for="fix">ပြင်လိုက်တဲ့နည်း (Solution)</label><textarea id="fix"></textarea>
+          <label class="chk"><input type="checkbox" id="done" checked> Done ✅</label>
+          <div class="row" style="margin-top:12px"><button type="submit" class="pri">ပြင်ထားတာ Save</button></div>
+        </form>
       </details>
-      <form id="f" autocomplete="off">
-        <input type="hidden" id="eid">
-        <label for="model">ဖုန်း Model</label>
-        <input id="model" placeholder="Redmi Note 12 Pro" required>
-        <label for="error">Error / Symptom</label>
-        <input id="error" placeholder="Baseband Unknown, No power, Charging error…" list="errList" required>
-        <datalist id="errList"></datalist>
-        <label for="diag">စစ်ဆေးချက် / Reading (လမ်းကြောင်း၊ ampere၊ OL…)</label>
-        <textarea id="diag" placeholder="MIPI_M_SCLK လမ်းကြောင်း OL ပြ"></textarea>
-        <label for="ics">ပါဝင်တဲ့ IC (comma ခြား)</label>
-        <input id="ics" placeholder="MT6190M, CPU">
-        <label for="fix">ပြင်လိုက်တဲ့နည်း</label>
-        <textarea id="fix" placeholder="CPU reball, MT6190M change"></textarea>
-        <label class="chk"><input type="checkbox" id="done" checked> Done ✅ (ပြင်ပြီး)</label>
-        <div class="row" style="margin-top:14px">
-          <button type="submit" class="pri" id="saveBtn">Save</button>
-          <button type="button" id="clearBtn">ရှင်းမယ်</button>
-        </div>
-        <p class="status">Save ပြီးရင် ဒီ case က ဘေးမှာ ဆက်ပြနေမယ် — "Case အသစ်" ထည့်ချင်ရင် ရှင်းမယ် ကိုနှိပ်ပါ</p>
-        <p class="status" id="store">မှတ်တမ်း ချိတ်ဆက်နေသည်…</p>
-      </form>
+      <p class="status" id="store">မှတ်တမ်း ချိတ်ဆက်နေသည်…</p>
     </section>
 
-    <section class="panel" aria-labelledby="ph">
-      <p class="lab" id="ph">Shortcut formula</p>
+    <section class="panel" aria-label="Formula, Gemini prompt and solution">
+      <p class="lab">Shortcut formula</p>
       <div class="formula" id="formula"></div>
-      <div class="row" style="margin-top:10px"><button class="sm" id="copyF">Formula ကူး</button></div>
-      <div class="row" style="margin-top:18px;justify-content:space-between">
-        <p class="lab" style="margin:0">Gemini prompt</p>
-        <select id="lang" aria-label="Answer language">
-          <option value="my">အဖြေ မြန်မာလို</option>
-          <option value="en">Answer in English</option>
-        </select>
-      </div>
+      <button class="sm" id="copyF">Formula ကူး</button>
+      <hr>
+      <div class="step"><span class="num">2</span><h2>Gemini prompt</h2>
+        <select id="lang" aria-label="Answer language" style="margin-left:auto"><option value="my">မြန်မာလို</option><option value="en">English</option></select></div>
       <div class="prompt" id="prompt"></div>
       <div class="row">
         <button class="pri" id="copyP">Prompt ကူး</button>
         <a class="btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့်</a>
       </div>
-      <p class="lab" style="margin-top:10px">Prompt ကူးပြီး Gemini မှာ paste လုပ်ပါ</p>
-      <label for="ai" style="color:#f2f4f5;margin-top:18px">Gemini အဖြေ — ရလာတဲ့အဖြေကို ဒီမှာ ပြန် paste လုပ်ပါ</label>
-      <textarea id="ai" class="aibox" placeholder="Gemini ရဲ့ အဖြေကို ကူးပြီး ဒီမှာ ထည့်ပါ…"></textarea>
+      <hr>
+      <div class="step"><span class="num">3</span><h2>ဖုန်း Solution (Gemini အဖြေ)</h2></div>
+      <textarea id="ai" placeholder="Gemini ပြန်ပေးတဲ့အဖြေကို ဒီမှာ paste လုပ်ပါ"></textarea>
       <div class="row" style="margin-top:10px">
-        <button type="submit" form="f" class="pri">အဖြေနဲ့တကွ Save</button>
-        <button type="button" class="sm" id="pasteAi">Paste</button>
+        <button class="pri" id="saveSol">Solution သိမ်းမယ်</button>
       </div>
+      <p class="lab" style="margin-top:8px" id="solFor">Note ခွဲပြီးမှ Solution သိမ်းလို့ရမယ်</p>
     </section>
   </div>
 </main>
 
 <section class="band" aria-labelledby="lh">
-  <h2 id="lh">သိမ်းထားတဲ့ Case များ <span id="count" style="color:var(--mute);font-weight:500"></span></h2>
+  <h2 id="lh">Model အလိုက် Case များ <span id="count" style="color:var(--mute);font-weight:500"></span></h2>
   <div class="search">
-    <input id="q" type="search" placeholder="ရှာရန်: model, error, IC (ဥပမာ 12R, PM7250B, No power)">
+    <input id="q" type="search" placeholder="ရှာရန်: model, error, IC, solution (ဥပမာ 12R, PM7250B)">
     <div class="chips" id="chips"></div>
   </div>
-  <div class="list" id="list"></div>
+  <div id="list"></div>
 </section>
 
 <div class="toast" id="toast" role="status"></div>
@@ -150,16 +147,19 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const F=['model','error','diag','ics','fix','ai'];
-const ERR=['Baseband Unknown','No power','No Power','Charging error','Not charging','Radio Off','No service','No signal','Hang logo','Restart','Dead','No display','No touch','Network error','Wifi error','Bluetooth error','No sound','Mic error','Camera error','Short'];
-let cases=[],db=null,mode='wait',filter='',chip='';
+const F=['model','error','diag','ics','fix'];
+const ERR=['Baseband Unknown','No power','Charging error','Not charging','Radio Off','No service','No signal','Hang logo','Restart','Dead','No display','No touch','Network error','Wifi error','Bluetooth error','No sound','Mic error','Camera error','Short'];
+let cases=[],db=null,sample=null,mode='wait',filter='',chip='';
 
-const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1600)};
-const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('ကူးပြီးပါပြီ')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('ကူးပြီးပါပြီ')}catch(x){toast('ကူးမရပါ — ကိုယ်တိုင် select လုပ်ပါ')}a.remove()}};
-const icList=s=>String(s||'').split(/[,،\n]/).map(x=>x.trim()).filter(Boolean);
+const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000)};
+const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('ကူးပြီးပါပြီ')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('ကူးပြီးပါပြီ')}catch(x){toast('ကူးမရပါ')}a.remove()}};
+const icList=s=>String(s||'').split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
+const mkey=m=>String(m||'').toLowerCase().replace(/\s+/g,' ').replace(/[()]/g,'').trim();
 
 function read(){const o={};F.forEach(k=>o[k]=$(k).value.trim());o.done=$('done').checked;return o}
-function fill(o){F.forEach(k=>$(k).value=o[k]||'');$('done').checked=o.done!==false;$('eid').value=o.id||'';$('saveBtn').textContent=o.id?'Update':'Save';draw()}
+function current(){const id=$('eid').value;const c=cases.find(x=>x.id===id)||{};return{...c,...read(),id:id||undefined}}
+function fill(o){F.forEach(k=>$(k).value=o[k]||'');$('done').checked=o.done!==false;$('eid').value=o.id||'';$('ai').value=o.ai||'';
+  $('solFor').textContent=o.id?`Solution ကို "${o.model} — ${o.error}" အောက်မှာ သိမ်းမယ်`:'Note ခွဲပြီးမှ Solution သိမ်းလို့ရမယ်';draw()}
 
 function formulaText(o){
   const p=[o.model,o.error,o.diag&&o.diag.split('\n')[0],icList(o.ics).join(' + '),o.fix&&o.fix.split('\n').join(' / ')].filter(Boolean);
@@ -168,12 +168,13 @@ function formulaText(o){
 function formulaHTML(o){
   const ics=icList(o.ics).map(i=>`<span class="ic">${esc(i)}</span>`).join(' + ');
   const p=[esc(o.model),esc(o.error),esc(o.diag&&o.diag.split('\n')[0]),ics,esc(o.fix&&o.fix.split('\n').join(' / '))].filter(Boolean);
-  return p.length?p.join('<span class="sep">▸</span>')+(o.done?' ✅':' ⏳'):'<span style="color:#9aa5ae">Model နဲ့ Error ရိုက်ထည့်ရင် formula ဒီမှာပေါ်မယ်</span>';
+  return p.length?p.join('<span class="sep">▸</span>')+(o.done?' ✅':' ⏳'):'<span style="color:#9aa5ae">Note ထည့်ပြီး "ခွဲပြီး သိမ်းမယ်" နှိပ်ရင် ဒီမှာပေါ်မယ်</span>';
 }
 function promptText(o){
+  if(!o.model||!o.error)return 'Note ခွဲပြီးရင် prompt ဒီမှာ ပေါ်မယ်';
   const my=$('lang').value==='my', ics=icList(o.ics).join(', ')||'unknown';
   const L=['You are an expert mobile phone board-level (motherboard) repair technician.','',
-  `Phone model: ${o.model||'-'}`,`Fault / symptom: ${o.error||'-'}`];
+  `Phone model: ${o.model}`,`Fault / symptom: ${o.error}`];
   if(o.diag)L.push(`My measurements / findings: ${o.diag.replace(/\n/g,'; ')}`);
   L.push(`ICs involved: ${ics}`);
   if(o.fix)L.push(`${o.done?'Fix that worked':'What I tried'}: ${o.fix.replace(/\n/g,'; ')}`);
@@ -189,22 +190,40 @@ function promptText(o){
 }
 function draw(){const o=read();$('formula').innerHTML=formulaHTML(o);$('prompt').textContent=promptText(o)}
 
-/* ---- parsing notes ---- */
-function parse(block){
+/* ---- splitting notes: Claude first, simple rules as fallback ---- */
+function ruleParse(block){
   const lines=block.split('\n').map(l=>l.replace(/✅/g,'').trim()).filter(Boolean);
   if(!lines.length)return null;
-  const done=/done|✅/i.test(block);
+  const done=/done|✅|ok\b/i.test(block);
   let model=lines.shift(),error='';
   const hit=ERR.find(e=>model.toLowerCase().includes(e.toLowerCase()));
   if(hit){const i=model.toLowerCase().indexOf(hit.toLowerCase());error=model.slice(i).trim();model=model.slice(0,i).trim()}
-  else if(lines.length&&(/error|unknown|no |off|power|charg|dead|hang|restart/i.test(lines[0])))error=lines.shift();
-  const icSet=new Set((block.match(/\b[A-Z]{2,}[0-9]{3,}[A-Z0-9]*\b/g)||[]));
+  else if(lines.length&&/error|unknown|no |off|power|charg|dead|hang|restart/i.test(lines[0]))error=lines.shift();
+  const icSet=new Set(block.match(/\b[A-Z]{2,}[0-9]{3,}[A-Z0-9]*\b/g)||[]);
   if(/\bCPU\b/i.test(block))icSet.add('CPU');
-  error=error.replace(/\b[A-Z]{2,}[0-9]{3,}[A-Z0-9]*\b/g,'').trim()||error;
+  error=error.replace(/\b[A-Z]{2,}[0-9]{3,}[A-Z0-9]*\b/g,'').trim()||error||'Unknown';
   const fixRe=/change|reball|ပြန်ဆက်|ပြန်ထိုင်|replace|jumper|clean|ဖော်|done/i;
   const fix=lines.filter(l=>fixRe.test(l)).map(l=>l.replace(/လိုက်တော့\s*done/i,'').replace(/\bdone\b/i,'').trim()).filter(Boolean);
-  const diag=lines.filter(l=>!fixRe.test(l));
-  return{model,error,diag:diag.join('\n'),ics:[...icSet].join(', '),fix:fix.join('\n'),done};
+  return{model,error,diag:lines.filter(l=>!fixRe.test(l)).join('\n'),ics:[...icSet].join(', '),fix:fix.join('\n'),done};
+}
+async function aiParse(note){
+  const instr=`You split a mobile phone motherboard repair technician's notes (Burmese mixed with English) into structured cases.
+Notes may hold one or several cases (often separated by blank lines; each starts with a phone model).
+For each case return:
+- model: phone model only, cleaned (e.g. "Redmi Note 12 Pro", "Redmi 10 (2022)")
+- error: the fault in short English (e.g. "Baseband Unknown", "No power", "Charging error", "Radio Off")
+- diag: what was measured or found (lines, OL, ampere, water damage…), keep the technician's Burmese wording, one item per line
+- ics: comma-separated IC / part names involved (e.g. "MT6190M, CPU")
+- fix: what was done to repair it, keep Burmese wording, one step per line
+- done: true if it was fixed (Done, ✅, OK), else false
+Do not invent anything not in the notes; leave a field "" if missing.
+Reply with JSON only: {"cases":[{"model":"","error":"","diag":"","ics":"","fix":"","done":true}]}
+
+NOTES:
+${note}`;
+  const r=await sample.json(instr,{modelTier:'quick'});
+  const list=Array.isArray(r)?r:(r&&r.cases)||[];
+  return list.filter(c=>c&&c.model).map(c=>({model:String(c.model),error:String(c.error||'Unknown'),diag:String(c.diag||''),ics:String(c.ics||''),fix:String(c.fix||''),done:c.done!==false}));
 }
 
 /* ---- storage: shared db, local fallback ---- */
@@ -214,8 +233,10 @@ const saveLocal=()=>{try{localStorage.setItem(LK,JSON.stringify(cases))}catch(e)
 async function put(o){
   o.id=o.id||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   o.updated=Date.now();o.created=o.created||o.updated;
-  if(mode==='db'){const {id,...data}=o;await db.collection('cases').doc(id).set(data)}
-  else{const i=cases.findIndex(c=>c.id===o.id);i<0?cases.unshift(o):cases[i]=o;saveLocal();render()}
+  const data={};['model','error','diag','ics','fix','done','ai','note','created','updated'].forEach(k=>{if(o[k]!==undefined)data[k]=o[k]});
+  if(mode==='db')await db.collection('cases').doc(o.id).set(data);
+  else{const i=cases.findIndex(c=>c.id===o.id);i<0?cases.unshift({...data,id:o.id}):cases[i]={...data,id:o.id};saveLocal();render()}
+  return o;
 }
 async function del(id){
   if(mode==='db')await db.collection('cases').doc(id).delete();
@@ -223,50 +244,66 @@ async function del(id){
 }
 function useLocal(msg){if(mode==='db')return;mode='local';cases=loadLocal();$('store').textContent=msg;render()}
 
-/* ---- list ---- */
-function render(){
-  cases.sort((a,b)=>(b.created||0)-(a.created||0));
-  const errs=[...new Set(cases.map(c=>(c.error||'').replace(/error/i,'').trim()).filter(Boolean))];
-  $('errList').innerHTML=errs.map(e=>`<option value="${esc(e)}">`).join('');
-  $('chips').innerHTML=['',...errs].map(e=>`<button class="chip ${chip===e?'on':''}" data-chip="${esc(e)}">${e?esc(e):'အားလုံး'}</button>`).join('');
-  const q=filter.toLowerCase();
-  const show=cases.filter(c=>(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.diag,c.ics,c.fix,c.ai].join(' ').toLowerCase().includes(q)));
-  $('count').textContent=`(${show.length}/${cases.length})`;
-  $('list').innerHTML=show.length?show.map(c=>`<article class="card case">
-    <h3>${esc(c.model)} <span class="${c.done?'done':''}">${c.done?'✅':'⏳'}</span></h3>
-    <div class="err">${esc(c.error)}</div>
+/* ---- list grouped by model ---- */
+function card(c){
+  return `<article class="card case">
+    <div class="err">${esc(c.error)} <span class="${c.done?'done':''}">${c.done?'✅':'⏳'}</span></div>
     ${c.diag?`<p><span class="k">စစ်ဆေးချက်</span>${esc(c.diag).replace(/\n/g,'<br>')}</p>`:''}
     ${c.ics?`<p><span class="k">IC</span>${icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join('')}</p>`:''}
     ${c.fix?`<p><span class="k">ပြင်နည်း</span>${esc(c.fix).replace(/\n/g,'<br>')}</p>`:''}
     <div class="row" style="margin-top:10px">
       <button class="sm" data-act="prompt" data-id="${c.id}">Prompt ကူး</button>
-      <button class="sm" data-act="formula" data-id="${c.id}">Formula ကူး</button>
-      <button class="sm" data-act="ai" data-id="${c.id}">${c.ai?'အဖြေပြင်':'အဖြေထည့်'}</button>
+      <button class="sm" data-act="sol" data-id="${c.id}">${c.ai?'Solution ပြင်':'Solution ထည့်'}</button>
       <button class="sm" data-act="edit" data-id="${c.id}">ပြင်</button>
       <button class="sm" data-act="del" data-id="${c.id}">ဖျက်</button>
     </div>
-    ${c.ai?`<details><summary>Gemini အဖြေ ကြည့်ရန်</summary><div class="aitext">${esc(c.ai)}</div><button class="sm" data-act="copyai" data-id="${c.id}">အဖြေ ကူး</button></details>`:''}
-    </article>`).join(''):`<div class="empty">${cases.length?'ရှာတာနဲ့ ကိုက်တဲ့ case မရှိပါ':'Case မရှိသေးပါ — အပေါ်မှာ ထည့်ပါ'}</div>`;
+    ${c.ai?`<details class="sol"><summary>ဖုန်း Solution ကြည့်ရန်</summary><div class="soltext">${esc(c.ai)}</div><button class="sm" data-act="copyai" data-id="${c.id}">Solution ကူး</button></details>`:'<p class="nosol">Solution မထည့်ရသေး</p>'}
+  </article>`;
+}
+function render(){
+  cases.sort((a,b)=>(b.created||0)-(a.created||0));
+  const errs=[...new Set(cases.map(c=>(c.error||'').replace(/error/i,'').trim()).filter(Boolean))];
+  $('chips').innerHTML=['',...errs].map(e=>`<button class="chip ${chip===e?'on':''}" data-chip="${esc(e)}">${e?esc(e):'အားလုံး'}</button>`).join('');
+  const q=filter.toLowerCase();
+  const show=cases.filter(c=>(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.diag,c.ics,c.fix,c.ai].join(' ').toLowerCase().includes(q)));
+  $('count').textContent=`(${show.length}/${cases.length})`;
+  const groups=new Map();
+  show.forEach(c=>{const k=mkey(c.model);if(!groups.has(k))groups.set(k,{name:c.model,items:[]});groups.get(k).items.push(c)});
+  $('list').innerHTML=show.length?[...groups.values()].map(g=>`<section class="group"><h3>${esc(g.name)} <span>${g.items.length} case · ${g.items.filter(c=>c.ai).length} solution</span></h3><div class="list">${g.items.map(card).join('')}</div></section>`).join('')
+    :`<div class="empty">${cases.length?'ရှာတာနဲ့ ကိုက်တဲ့ case မရှိပါ':'Case မရှိသေးပါ — အပေါ်မှာ note ထည့်ပါ'}</div>`;
 }
 
 /* ---- events ---- */
 F.forEach(k=>$(k).addEventListener('input',draw));
 $('done').addEventListener('change',draw);$('lang').addEventListener('change',draw);
-const ready=()=>{const o=read();if(o.model&&o.error)return o;toast('Model နဲ့ Error အရင်ဖြည့်ပါ — ဒါမှမဟုတ် အောက်က case ရဲ့ "Prompt ကူး" ကိုနှိပ်ပါ');$(o.model?'error':'model').focus();return null};
-$('copyF').onclick=()=>{const o=ready();if(o)copy(formulaText(o))};
-$('copyP').onclick=()=>{const o=ready();if(o)copy(promptText(o))};
-$('clearBtn').onclick=()=>fill({});
-$('pasteAi').onclick=async()=>{try{const t=await navigator.clipboard.readText();if(t){$('ai').value=t;toast('Paste ပြီး — Save နှိပ်ပါ')}}catch(e){$('ai').focus();toast('Box ကို ဖိထားပြီး Paste ကိုရွေးပါ')}};
+$('copyF').onclick=()=>{const o=read();o.model?copy(formulaText(o)):toast('Note အရင်ထည့်ပါ')};
+$('copyP').onclick=()=>{const o=read();o.model&&o.error?copy(promptText(o)):toast('Note အရင်ထည့်ပြီး ခွဲပါ')};
+$('newBtn').onclick=()=>{fill({});$('note').value='';$('fieldsBox').open=false;$('note').focus()};
+
+$('splitBtn').onclick=async()=>{
+  const note=$('note').value.trim();if(!note)return toast('Note ထည့်ပါ');
+  const b=$('splitBtn');b.disabled=true;b.textContent='ခွဲနေသည်…';
+  let list=[];
+  if(sample){try{list=await aiParse(note)}catch(e){list=[]}}
+  if(!list.length)list=note.split(/\n\s*\n/).map(ruleParse).filter(o=>o&&o.model);
+  b.disabled=false;b.textContent='ခွဲပြီး သိမ်းမယ်';
+  if(!list.length)return toast('ခွဲမရပါ — ဖုန်း model ကို ပထမစာကြောင်းမှာ ရေးပါ');
+  const blocks=note.split(/\n\s*\n/);
+  try{
+    const saved=[];
+    for(let i=0;i<list.length;i++){const o=list[i];o.note=list.length===blocks.length?blocks[i].trim():note;saved.push(await put(o))}
+    fill(saved[0]);$('note').value='';
+    toast(saved.length>1?`${saved.length} case ခွဲပြီး သိမ်းပြီ — ပထမ case ကိုပြထားတယ်`:'ခွဲပြီး သိမ်းပြီ — Prompt ကူးလို့ရပြီ');
+  }catch(x){toast('သိမ်းမရပါ: '+(x.message||x))}
+};
 $('f').addEventListener('submit',async e=>{
-  e.preventDefault();const o=read();if(!o.model||!o.error)return toast('Model နဲ့ Error ထည့်ပါ');
-  const id=$('eid').value;if(id){const old=cases.find(c=>c.id===id);o.id=id;o.created=old&&old.created}
-  try{await put(o);toast((id?'ပြင်ပြီးပါပြီ':'သိမ်းပြီးပါပြီ')+' — Prompt ကူးလို့ရပြီ');fill(o)}catch(x){toast('သိမ်းမရပါ: '+(x.message||x))}
+  e.preventDefault();const o=current();if(!o.model)return toast('Model ထည့်ပါ');
+  try{fill(await put(o));toast('Save ပြီးပါပြီ')}catch(x){toast('သိမ်းမရပါ')}
 });
-$('parseOne').onclick=()=>{const o=parse($('raw').value);if(o){fill(o);toast('Form ထဲဖြည့်ပြီး — စစ်ပြီး Save နှိပ်ပါ')}};
-$('parseBulk').onclick=async()=>{
-  const blocks=$('raw').value.split(/\n\s*\n/).map(parse).filter(o=>o&&o.model);
-  for(const o of blocks){try{await put(o)}catch(x){}}
-  toast(blocks.length+' case သိမ်းပြီး');$('raw').value='';
+$('saveSol').onclick=async()=>{
+  const o=current();if(!o.id)return toast('Note အရင်ခွဲပါ (ဒါမှမဟုတ် case တစ်ခုရဲ့ "Solution ထည့်" ကိုနှိပ်ပါ)');
+  o.ai=$('ai').value.trim();if(!o.ai)return toast('Gemini အဖြေကို paste လုပ်ပါ');
+  try{await put(o);toast(`Solution ကို ${o.model} အောက်မှာ သိမ်းပြီး`)}catch(x){toast('သိမ်းမရပါ')}
 };
 $('q').addEventListener('input',e=>{filter=e.target.value;render()});
 $('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(!b)return;chip=b.dataset.chip;render()});
@@ -274,19 +311,19 @@ $('list').addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const c=cases.find(x=>x.id===b.dataset.id);if(!c)return;
   const a=b.dataset.act;
   if(a==='prompt'){fill(c);copy(promptText(c))}
-  else if(a==='formula')copy(formulaText(c));
   else if(a==='copyai')copy(c.ai||'');
-  else if(a==='ai'){fill(c);$('ai').scrollIntoView({behavior:'smooth',block:'center'});$('ai').focus({preventScroll:true})}
-  else if(a==='edit'){fill(c);window.scrollTo({top:0,behavior:'smooth'})}
+  else if(a==='sol'){fill(c);$('ai').scrollIntoView({behavior:'smooth',block:'center'});$('ai').focus({preventScroll:true})}
+  else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
   else if(a==='del'){
-    if(b.dataset.sure){try{await del(c.id);toast('ဖျက်ပြီး')}catch(x){toast('ဖျက်မရပါ')}}
-    else{b.dataset.sure='1';b.textContent='သေချာလား? ထပ်နှိပ်';b.style.color='var(--red)';setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='ဖျက်'}},3000)}
+    if(b.dataset.sure){try{await del(c.id);if($('eid').value===c.id)fill({});toast('ဖျက်ပြီး')}catch(x){toast('ဖျက်မရပါ')}}
+    else{b.dataset.sure='1';b.textContent='သေချာလား? ထပ်နှိပ်';b.style.color='var(--red)';setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='ဖျက်';b.style.color=''}},3000)}
   }
 });
 
 draw();render();
 const timer=setTimeout(()=>useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ် (online မှတ်တမ်း မချိတ်နိုင်ပါ)'),10000);
 if(window.claude&&claude.use){
+  claude.use('sample').then(s=>{sample=s}).catch(()=>{});
   claude.use('db').then(d=>{
     if(!d){clearTimeout(timer);return useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')}
     db=d;
@@ -294,7 +331,7 @@ if(window.claude&&claude.use){
       clearTimeout(timer);mode='db';$('store').textContent='Online မှတ်တမ်း — ဘယ်ဖုန်းကဖွင့်ဖွင့် ပြန်ရှာလို့ရ';
       const docs=snap.docs||snap||[];
       cases=docs.map(x=>({id:x.id,...(typeof x.data==='function'?x.data():(x.data||{}))}));render();
-    },err=>{clearTimeout(timer);useLocal('Online မချိတ်ရ — browser ထဲမှာ သိမ်းထားပါတယ်')});
+    },()=>{clearTimeout(timer);useLocal('Online မချိတ်ရ — browser ထဲမှာ သိမ်းထားပါတယ်')});
   }).catch(()=>{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')});
 }else{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')}
 }
