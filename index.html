@@ -197,7 +197,8 @@ body.lock{overflow:hidden}
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
   <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
   <div class="syncbar">
-    <p class="sync" id="sync">Sync စစ်နေသည်…</p>
+    <p class="status" id="appVer" style="margin:4px 0 0">Version 2026-11-20 · 22:30</p>
+  <p class="sync" id="sync">Sync စစ်နေသည်…</p>
     <div class="row" id="gdBox" hidden><button class="sm pri" id="gdBtn">Google Drive နဲ့ Sync ချိတ်</button><button class="sm" id="gdNow" hidden>ယခု Sync</button></div>
   </div>
   <p class="status" id="gdStat"></p>
@@ -904,7 +905,12 @@ if(window.claude&&claude.use){
   }).catch(()=>{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')});
 }else{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')}
 gdSetup();
-if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')&&!(window.claude&&claude.use))navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')&&!(window.claude&&claude.use)){
+  const hadCtl=!!navigator.serviceWorker.controller;let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadCtl&&!reloaded){reloaded=true;location.reload()}});
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update().catch(()=>{});
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')r.update().catch(()=>{})})}).catch(()=>{});
+}
 }
 </script>
 </body>
