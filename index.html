@@ -426,6 +426,7 @@ const ACT=['change','reball','jumper','clean','replace','ပြန်ဆက်',
 const acts=s=>new Set(ACT.filter(k=>String(s||'').toLowerCase().includes(k)));
 function sameCase(a,b){
   if((a.kind||'case')!==(b.kind||'case'))return false;
+  if(a.kind==='lesson'&&a.note&&b.note&&normN(a.note)===normN(b.note))return true;
   if(a.kind==='lesson')return mkey(a.model)===mkey(b.model)&&norm(a.error)===norm(b.error)&&norm(a.title)===norm(b.title)&&norm(a.diag).slice(0,60)===norm(b.diag).slice(0,60);
   if(mkey(a.model)!==mkey(b.model)||norm(a.error)!==norm(b.error))return false;
   if(norm(a.fix)===norm(b.fix))return true;
