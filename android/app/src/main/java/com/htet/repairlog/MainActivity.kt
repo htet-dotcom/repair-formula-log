@@ -23,6 +23,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.WebViewAssetLoader
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Scope
 import org.json.JSONObject
 
@@ -54,7 +56,7 @@ class MainActivity : ComponentActivity() {
             val r = Identity.getAuthorizationClient(this).getAuthorizationResultFromIntent(res.data)
             sendDriveToken(r.accessToken, null)
         } catch (e: Exception) {
-            sendDriveToken(null, "cancelled")
+            sendDriveToken(null, describeAuthError(e, res.resultCode))
         }
     }
 
@@ -161,7 +163,23 @@ class MainActivity : ComponentActivity() {
                     else -> sendDriveToken(null, "consent")
                 }
             }
-            .addOnFailureListener { e -> sendDriveToken(null, e.message ?: "error") }
+            .addOnFailureListener { e -> sendDriveToken(null, describeAuthError(e, null)) }
+    }
+
+    /** Readable reason, with the Google status code, so a setup problem can be told from a real cancel. */
+    private fun describeAuthError(e: Exception, resultCode: Int?): String {
+        val code = (e as? ApiException)?.statusCode
+        val hint = when (code) {
+            CommonStatusCodes.DEVELOPER_ERROR ->
+                "Google Cloud မှာ Android OAuth client (package com.htet.repairlog + SHA-1) မထည့်ရသေး / မကိုက်ပါ"
+            CommonStatusCodes.CANCELED ->
+                "ပယ်ဖျက်လိုက်သည် (OAuth consent screen က Testing ဆိုရင် ဒီ Gmail ကို Test user ထဲ ထည့်ပါ)"
+            CommonStatusCodes.NETWORK_ERROR -> "အင်တာနက် စစ်ပါ"
+            CommonStatusCodes.SIGN_IN_REQUIRED -> "ဖုန်းမှာ Google အကောင့် ဝင်ထားဖို့ လိုသည်"
+            else -> e.message ?: "error"
+        }
+        val rc = if (resultCode != null && resultCode != RESULT_OK) " result=$resultCode" else ""
+        return "$hint [code=${code ?: "-"}$rc]"
     }
 
     private fun sendDriveToken(token: String?, error: String?) {
