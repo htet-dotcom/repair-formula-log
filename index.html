@@ -882,6 +882,7 @@ async function saveImg(c,i){
     const ext=((blob.type||'image/jpeg').split('/')[1]||'jpg').replace('jpeg','jpg');
     const fname=`${c.model}-${c.error}-${i+1}`.replace(/[\\/:*?"<>|\s]+/g,'_')+'.'+ext;
     const file=new File([blob],fname,{type:blob.type||'image/jpeg'});
+    if(window.claude&&claude.use){const dl=await claude.use('downloads');if(dl){await dl.save({filename:fname,data:blob});toast('ပုံ Save ပြီး');return}}
     if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return}
     const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=fname;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),5000);toast('ပုံ Save ပြီး — Gallery / Download ထဲမှာ ကြည့်ပါ');
