@@ -101,7 +101,7 @@ body.lock{overflow:hidden}
         <button class="pri" id="splitBtn">ခွဲပြီး သိမ်းမယ်</button>
         <button id="newBtn">Case အသစ်</button>
       </div>
-      <p class="status">Case အများကြီးဆို blank line တစ်ကြောင်းခြားပြီး တခါတည်းထည့်လို့ရ</p>
+      <p class="status">Case အများကြီးဆို blank line တစ်ကြောင်းခြားပြီး တခါတည်းထည့်လို့ရ။ ဖုန်း Model နဲ့ စစ်ဆေးချက် မပါတဲ့ case ကို မသိမ်းပါ</p>
 
       <details id="fieldsBox" style="margin-top:10px">
         <summary>ခွဲထားတာ စစ်ရန် / ပြင်ရန်</summary>
@@ -329,11 +329,15 @@ $('splitBtn').onclick=async()=>{
   if(!list.length)list=note.split(/\n\s*\n/).map(ruleParse).filter(o=>o&&o.model);
   b.disabled=false;b.textContent='ခွဲပြီး သိမ်းမယ်';
   if(!list.length)return toast('ခွဲမရပါ — ဖုန်း model ကို ပထမစာကြောင်းမှာ ရေးပါ');
+  const all=list.length;list=list.filter(o=>String(o.model||'').trim()&&String(o.diag||'').trim());
+  const skipped=all-list.length;
+  if(!list.length)return toast('ဖုန်း Model နဲ့ စစ်ဆေးချက် ပါတဲ့ case မရှိလို့ မသိမ်းပါ');
   const blocks=note.split(/\n\s*\n/);
   list.forEach((o,i)=>o.note=list.length===blocks.length?blocks[i].trim():note);
+  const skipMsg=skipped?` (Model/စစ်ဆေးချက် မပါတဲ့ ${skipped} ခု ချန်ထားတယ်)`:'';
   try{
     const r=await addMany(list);fill(r.first);$('note').value='';
-    toast(r.added&&r.dup?`အသစ် ${r.added} ခု သိမ်းပြီ၊ ရှိပြီးသား ${r.dup} ခု ထပ်မထည့်ပါ`:r.dup?'ဒီ case ရှိပြီးသား — အသစ်မထည့်ပါ (ကြုံဖူးအကြိမ် +1)':r.added>1?`${r.added} case ခွဲပြီး သိမ်းပြီ`:'ခွဲပြီး သိမ်းပြီ — Prompt ကူးလို့ရပြီ');
+    toast((r.added&&r.dup?`အသစ် ${r.added} ခု သိမ်းပြီ၊ ရှိပြီးသား ${r.dup} ခု ထပ်မထည့်ပါ`:r.dup?'ဒီ case ရှိပြီးသား — အသစ်မထည့်ပါ (ကြုံဖူးအကြိမ် +1)':r.added>1?`${r.added} case ခွဲပြီး သိမ်းပြီ`:'ခွဲပြီး သိမ်းပြီ — Prompt ကူးလို့ရပြီ')+skipMsg);
   }catch(x){toast('သိမ်းမရပါ: '+(x.message||x))}
 };
 
