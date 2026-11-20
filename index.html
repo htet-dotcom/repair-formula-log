@@ -99,6 +99,12 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .viewer.img .vbody{background:#0d0f11;max-width:none;display:flex;align-items:center;justify-content:center;padding:12px}
 .viewer.img .vbody img{max-height:100%;object-fit:contain}
 .vhead button{flex:none}.vhead h2{min-width:0;overflow-wrap:anywhere}
+.ytbox{margin-top:12px;padding:14px;border-radius:12px;background:var(--panel);color:var(--panelInk)}
+.ytbox .ytt{margin:0;font-weight:700;color:#ff6b61}
+.ytbox .ytl{margin:4px 0 0;font-size:14px;overflow-wrap:anywhere;color:#9aa5ae}
+.ytbox .prompt{background:#1a1e22;color:#dfe5e9;border:1px solid #2e353b;border-radius:10px;padding:12px;font:14px/1.55 Inter,"Noto Sans Myanmar",sans-serif;white-space:pre-wrap;max-height:180px;overflow:auto;margin:10px 0}
+.ytbox button,.ytbox a.btn{border-color:#f2f4f5;color:#f2f4f5}.ytbox button.pri{border-color:var(--red);background:var(--red);color:#fff}
+.ytbox .status{color:#9aa5ae}
 .status{font-size:13px;color:var(--mute);margin:8px 0 0}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
@@ -197,7 +203,7 @@ body.lock{overflow:hidden}
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
   <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
   <div class="syncbar">
-    <p class="status" id="appVer" style="margin:4px 0 0">Version 2026-11-20 · 22:30</p>
+    <p class="status" id="appVer" style="margin:4px 0 0">Version 2026-11-20 · 22:40</p>
   <p class="sync" id="sync">Sync စစ်နေသည်…</p>
     <div class="row" id="gdBox" hidden><button class="sm pri" id="gdBtn">Google Drive နဲ့ Sync ချိတ်</button><button class="sm" id="gdNow" hidden>ယခု Sync</button></div>
   </div>
@@ -216,7 +222,18 @@ body.lock{overflow:hidden}
         <button class="pri" id="splitBtn">ခွဲပြီး သိမ်းမယ်</button>
         <button id="newBtn">Case အသစ်</button>
       </div>
-      <p class="status" id="noteHelp">Paste လုပ်လိုက်တာနဲ့ အလိုလို ခွဲပြီး သိမ်းမယ်။ Zawgyi စာကို Unicode အလိုလိုပြောင်းမယ်။ Case အများကြီးဆို blank line တစ်ကြောင်းခြားပြီး တခါတည်းထည့်လို့ရ။ ဖုန်း Model နဲ့ စစ်ဆေးချက် မပါတဲ့ case ကို မသိမ်းပါ</p>
+      <div class="ytbox" id="ytBox" hidden>
+        <p class="ytt">YouTube video → Gemini prompt</p>
+        <p class="ytl" id="ytLinks"></p>
+        <div class="prompt" id="ytPrompt"></div>
+        <div class="row">
+          <button class="pri" id="ytCopy">YouTube Prompt ကူး</button>
+          <a class="btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့် ↗</a>
+          <button id="ytClose">ပိတ်</button>
+        </div>
+        <p class="status" style="margin-top:8px">Gemini ပြန်ပေးတဲ့ အဖြေကို ကူးပြီး Note box ထဲ paste လုပ်ရင် case / Shortcut အဖြစ် အလိုလို ခွဲသိမ်းမယ်</p>
+      </div>
+      <p class="status" id="noteHelp">YouTube link ထည့်ရင် Gemini prompt ထုတ်ပေးမယ်။ Paste လုပ်လိုက်တာနဲ့ အလိုလို ခွဲပြီး သိမ်းမယ်။ Zawgyi စာကို Unicode အလိုလိုပြောင်းမယ်။ Case အများကြီးဆို blank line တစ်ကြောင်းခြားပြီး တခါတည်းထည့်လို့ရ။ ဖုန်း Model နဲ့ စစ်ဆေးချက် မပါတဲ့ case ကို မသိမ်းပါ</p>
 
       <details id="fieldsBox" style="margin-top:10px">
         <summary>ခွဲထားတာ စစ်ရန် / ပြင်ရန်</summary>
@@ -403,7 +420,7 @@ For each entry return:
 - diag: case → what was measured or found; lesson → the lines / points / voltages to check. Keep the technician's Burmese wording, one item per line
 - ics: comma-separated IC / part names involved (e.g. "PMI632-902-00, Backlight Driver IC")
 - fix: case → what was done to repair it; lesson → the key tips and causes to remember (e.g. a resistor that causes black screen). Keep Burmese wording, one item per line
-- source: teacher or source named in a lesson, else ""
+- source: teacher, video link (e.g. a "Source:" YouTube URL) or source named, else ""
 - applies: other models or platforms the lesson says it also applies to, else ""
 - done: case → true if fixed (Done, ✅, OK), else false; lesson → true
 diag must not just repeat an IC name. Do not invent anything not in the notes; leave a field "" if missing.
@@ -724,9 +741,31 @@ $('list').addEventListener('drop',e=>{const g=e.target.closest('.gem');if(!g)ret
   const files=[...(e.dataTransfer&&e.dataTransfer.files||[])];const c=inp&&cases.find(x=>x.id===inp.dataset.imgfor);if(c&&files.length)addImages(c,files)});
 $('newBtn').onclick=()=>{fill({});$('note').value='';$('fieldsBox').open=false;$('note').focus()};
 
+/* ---- YouTube link → Gemini prompt ---- */
+const YT=/https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?[^\s]*v=|shorts\/|live\/)|youtu\.be\/)[\w-]{6,}[^\s]*/gi;
+function ytPrompt(urls){
+  const my=$('lang').value==='my';
+  return [`Watch ${urls.length>1?'these YouTube videos':'this YouTube video'} about mobile phone motherboard (board-level) repair:`,...urls,'',
+  'Extract the repair knowledge from '+(urls.length>1?'each video':'it')+'. '+(my?'Write in Burmese (မြန်မာဘာသာ), keeping IC names, pin names, voltages and technical terms in English.':'Write in clear English.'),
+  'Use EXACTLY this format — one block per phone model / fault, blocks separated by one blank line, no other text before or after:','',
+  '<Phone model> <Fault>','စစ်ဆေးချက်: <what was measured or found — one item per line>','IC: <IC / part names, comma separated>','ပြင်နည်း: <fix steps — one per line>','Diode/Volt: <diode and voltage values mentioned>','Source: <video link>','',
+  'If a video is a general lesson (how to check a circuit) rather than one repair, start its block with "#Shortcut <topic>", then the example phone model and fault, the lines / points to check, the IC names, and the key tips.',
+  'Only write what is actually shown or said in the video. If you cannot open or watch a video, say so instead of guessing.'].join('\n');
+}
+let ytUrls=[];
+function showYt(urls){ytUrls=urls;$('ytLinks').textContent=urls.join('\n');$('ytPrompt').textContent=ytPrompt(urls);$('ytBox').hidden=false}
+$('ytCopy').onclick=()=>copy(ytPrompt(ytUrls));
+$('ytClose').onclick=()=>{$('ytBox').hidden=true};
+$('lang').addEventListener('change',()=>{if(!$('ytBox').hidden)$('ytPrompt').textContent=ytPrompt(ytUrls)});
+
 $('splitBtn').onclick=async()=>{
   const fx=fixMM($('note').value);if(fx.changed)$('note').value=fx.text;
   let note=fx.text.trim();if(!note)return toast('Note ထည့်ပါ');
+  const urls=[...new Set(note.match(YT)||[])];
+  if(urls.length&&note.replace(YT,'').replace(/[\s\W_]+/g,'').length<25){
+    showYt(urls);$('note').value='';$('ytBox').scrollIntoView({behavior:'smooth',block:'nearest'});
+    return toast('YouTube link တွေ့တယ် — Prompt ကူးပြီး Gemini မှာ paste လုပ်ပါ');
+  }
   /* same text already saved → take it only once */
   const seen=new Set();
   cases.forEach(c=>{if(!c.note)return;seen.add(normN(c.note));if(!looksLesson(c.note))c.note.split(/\n\s*\n/).forEach(b=>{const k=normN(b);if(k)seen.add(k)})});
