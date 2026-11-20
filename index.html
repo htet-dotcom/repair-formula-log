@@ -85,9 +85,7 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .th{display:grid;gap:4px}
 .gem .thimg{padding:0;border:1px solid #2e353b;border-radius:10px;overflow:hidden;width:100%;height:auto;aspect-ratio:1;min-height:0;background:#1a1e22}
 .thimg img{width:100%;height:100%;object-fit:cover;display:block}
-.thbar{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.gem .thbar button{min-height:32px;font-size:13px;padding:0;border-radius:8px}
-.gem .thbar .thdel.sure{background:var(--red);border-color:var(--red)}
+#vDel{border-color:#ff6b61;color:#ff6b61}#vDel.sure{background:var(--red);border-color:var(--red);color:#fff}
 .addimg{width:100%;aspect-ratio:1;border:1px dashed #9aa5ae;border-radius:10px;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center;text-align:center;font-size:13px;font-weight:600;cursor:pointer;margin:0;color:#f2f4f5}
 .addimg b{font-size:24px;line-height:1}
 .addimg:focus-within{outline:3px solid var(--red)}
@@ -272,6 +270,7 @@ body.lock{overflow:hidden}
   <div class="vhead">
     <h2 id="vTitle"></h2>
     <button class="sm" id="vSave" hidden>⬇ Save</button>
+    <button class="sm" id="vDel" hidden>ဖျက်</button>
     <button class="sm" id="vEdit" hidden>✎ ပြင်</button>
     <button class="sm" id="vCancel" hidden>မပြင်တော့</button>
     <button class="sm" id="vCopy">ကူး</button>
@@ -658,7 +657,6 @@ function card(c){
       <p class="gl">ပုံ${imgs.length?` (${imgs.length})`:''}</p>
       <div class="thumbs">${imgs.map((im,i)=>`<div class="th">
           <button class="thimg" data-act="img" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} ကြည့်ရန်"><img src="${esc(imgSrc(im))}" alt="${esc(c.model)} ပုံ ${i+1}" loading="lazy"></button>
-          <div class="thbar"><button data-act="imgsave" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} Save">⬇ Save</button><button class="thdel" data-act="imgdel" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} ဖျက်">✕</button></div>
         </div>`).join('')}
         <label class="addimg"><b>＋</b>ပုံထည့်<input type="file" accept="image/*" multiple data-imgfor="${c.id}" class="fileov" aria-label="ပုံရွေး"></label>
       </div>
@@ -832,7 +830,7 @@ $('vEdit').onclick=async()=>{
   try{await put({...c,[viewCase.field]:v});viewCase.text=v;endEdit();toast('ပြင်ထားတာ သိမ်းပြီ');if(mode!=='db')render()}catch(e){toast('သိမ်းမရပါ')}
 };
 $('vCancel').onclick=()=>{if($('vTa')&&$('vTa').value!==viewCase.text&&!confirm('ပြင်ထားတာ မသိမ်းဘဲ ထားခဲ့မလား?'))return;endEdit()};
-const openView=(title,sub,isImg)=>{editing=false;$('vTitle').innerHTML=`${esc(title)}<span class="vsub">${esc(sub)}</span>`;$('vSave').hidden=!isImg;$('vCopy').hidden=!!isImg;
+const openView=(title,sub,isImg)=>{editing=false;$('vTitle').innerHTML=`${esc(title)}<span class="vsub">${esc(sub)}</span>`;$('vSave').hidden=!isImg;$('vDel').hidden=!isImg;$('vDel').classList.remove('sure');$('vDel').textContent='ဖျက်';$('vCopy').hidden=!!isImg;
   $('vEdit').hidden=!(viewCase&&viewCase.field);$('vEdit').textContent='✎ ပြင်';$('vEdit').classList.remove('pri');$('vCancel').hidden=true;$('vClose').hidden=false;
   $('viewer').classList.toggle('img',!!isImg);$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()};
 async function saveImg(c,i){
@@ -848,6 +846,13 @@ async function saveImg(c,i){
   }catch(e){if(e&&e.name==='AbortError')return;toast('Save မရပါ — ပုံကို ဖိထားပြီး "Download image" နှိပ်ပါ')}
 }
 $('vSave').onclick=()=>{if(viewCase&&viewCase.c)saveImg(viewCase.c,viewCase.i)};
+$('vDel').onclick=async()=>{
+  const b=$('vDel');if(!viewCase||!viewCase.c)return;
+  if(!b.classList.contains('sure')){b.classList.add('sure');b.textContent='သေချာလား?';toast('ပုံဖျက်ဖို့ ထပ်နှိပ်ပါ');clearTimeout(b.t);b.t=setTimeout(()=>{b.classList.remove('sure');b.textContent='ဖျက်'},3000);return}
+  clearTimeout(b.t);const c=cases.find(x=>x.id===viewCase.c.id)||viewCase.c,i=viewCase.i,im=(c.imgs||[])[i];
+  try{await put({...c,imgs:(c.imgs||[]).filter((_,j)=>j!==i)});if(im&&im.id&&assets){try{await assets.delete(im.id)}catch(e){}}
+    closeView();toast('ပုံဖျက်ပြီး');if(mode!=='db')render()}catch(x){toast('ဖျက်မရပါ')}
+};
 $('vClose').onclick=closeView;
 $('vCopy').onclick=()=>{if(viewCase&&viewCase.text)copy(viewCase.text);else toast('ပုံကို ဖိထားပြီး save လုပ်ပါ')};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('viewer').classList.contains('on'))closeView()});
@@ -864,12 +869,7 @@ $('list').addEventListener('click',async e=>{
   else if(a==='imgprompt'){copy(imagePrompt(c));if(!c.ai)toast('Solution မထည့်ရသေးလို့ case အချက်အလက်နဲ့ ကူးထားတယ်')}
   else if(a==='img'){const i=+b.dataset.i,im=(c.imgs||[])[i];if(!im)return;viewCase={text:'',c,i};
     $('vBody').innerHTML=`<img src="${esc(imgSrc(im))}" alt="${esc(c.model)} ပုံ">`;openView(c.model,`${c.error} — ပုံ ${i+1}/${c.imgs.length}`,true)}
-  else if(a==='imgsave')saveImg(c,+b.dataset.i);
-  else if(a==='imgdel'){
-    if(b.dataset.sure){const i=+b.dataset.i;const im=(c.imgs||[])[i];const imgs=(c.imgs||[]).filter((_,j)=>j!==i);
-      try{await put({...c,imgs});if(im&&im.id&&assets){try{await assets.delete(im.id)}catch(e){}}toast('ပုံဖျက်ပြီး');if(mode!=='db')render()}catch(x){toast('ဖျက်မရပါ')}}
-    else{b.dataset.sure='1';b.textContent='ဖျက်?';b.classList.add('sure');setTimeout(()=>{if(b.isConnected){delete b.dataset.sure;b.textContent='✕';b.classList.remove('sure')}},3000);toast('ပုံဖျက်ဖို့ ထပ်နှိပ်ပါ')}
-  }
+
   else if(a==='savesol'){const t=document.querySelector(`textarea[data-sol="${c.id}"]`);const v=t?fixMM(t.value).text.trim():'';if(!v)return toast('Gemini အဖြေကို paste လုပ်ပါ');
     try{openSol.delete(c.id);if(t)t.value='';await put({...c,ai:v});toast(`Solution ကို ${c.model} အောက်မှာ သိမ်းပြီ`);if(mode!=='db')render()}catch(x){toast('သိမ်းမရပါ')}}
   else if(a==='view'){viewCase={id:c.id,field:'ai',text:c.ai||''};viewRender();openView(c.model,`${c.error} — ဖုန်း Solution`,false)}
