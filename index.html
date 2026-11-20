@@ -138,6 +138,7 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .case .k{color:var(--mute);font-size:12px;font-weight:600;letter-spacing:.02em;display:block;margin-bottom:2px}
 .case .v{font-size:15px;line-height:1.6;overflow-wrap:anywhere}
 .case .v .tag{margin:2px 4px 2px 0}
+.case .v.one{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tag{display:inline-block;font-size:13px;font-weight:600;border-radius:6px;padding:1px 8px;margin:2px 4px 2px 0;background:var(--bg)}
 .done{color:var(--ok)}
 .solbtn{width:100%;justify-content:space-between;border-color:var(--ok);color:var(--ok)}
@@ -617,10 +618,10 @@ function md(src){
 /* ---- list grouped by model ---- */
 function card(c){
   const L=c.kind==='lesson',imgs=c.imgs||[];
-  const fld=(k,v)=>v?`<div><span class="k">${k}</span><div class="v">${v}</div></div>`:'';
+  const fld=(k,v,one)=>v?`<div><span class="k">${k}</span><div class="v${one?' one':''}">${v}</div></div>`:'';
   const br=t=>esc(t).replace(/\n/g,'<br>');
-  let cut=false;const short=t=>{const ls_=String(t||'').split('\n').filter(x=>x.trim());let o=ls_.slice(0,3).join('\n');if(ls_.length>3||o.length>160){cut=true;o=o.slice(0,160).replace(/\s+\S*$/,'')+' …'}return br(o)};
-  const sd=c.diag&&short(c.diag),sf=c.fix&&short(c.fix);
+  let cut=false;const short=t=>{const ls_=String(t||'').split('\n').map(x=>x.trim()).filter(Boolean);if(ls_.length>1||(ls_[0]||'').length>45)cut=true;return esc(ls_[0]||'')};
+  const sd=c.diag&&short(c.diag),sf=c.fix&&short(c.fix),sa=c.applies&&short(c.applies);
   const open=openCards.has(c.id);
   const peek=String(c.fix||c.diag||'').split('\n').find(Boolean)||'';
   return `<article class="card case${L?' lesson':''}${open?' open':''}">
@@ -636,10 +637,10 @@ function card(c){
     ${open?`<div class="cbody">
     ${L&&c.title?`<p class="ltitle">${esc(c.title)}</p>`:''}
     <div class="fields">
-      ${fld(L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',sd)}
+      ${fld(L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',sd,1)}
       ${fld('IC',c.ics&&icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join(''))}
-      ${fld(L?'အထူးသတိထားရန်':'ပြင်နည်း',sf)}
-      ${fld('တူတဲ့ Model / Platform',c.applies&&esc(c.applies))}
+      ${fld(L?'အထူးသတိထားရန်':'ပြင်နည်း',sf,1)}
+      ${fld('တူတဲ့ Model / Platform',sa,1)}
       ${fld('ဆရာ / Source',c.source&&esc(c.source))}
     </div>
     ${c.note||cut?`<button class="fullbtn" data-act="note" data-id="${c.id}"><span>မူရင်းစာ အပြည့်ကြည့်</span><span>›</span></button>`:''}
@@ -875,7 +876,7 @@ $('list').addEventListener('click',async e=>{
   else if(a==='note'){
     if(c.note){viewCase={id:c.id,field:'note',text:c.note};viewRender();openView(c.model,`${c.error} — မူရင်းစာ`,false)}
     else{const sec=(k,v)=>v?`<h3>${esc(k)}</h3><p>${esc(v).replace(/\n/g,'<br>')}</p>`:'';
-      viewCase={id:c.id,text:[c.diag,c.fix].filter(Boolean).join('\n\n'),html:sec(c.kind==='lesson'?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',c.diag)+sec('IC',c.ics)+sec(c.kind==='lesson'?'အထူးသတိထားရန်':'ပြင်နည်း',c.fix)};
+      viewCase={id:c.id,text:[c.diag,c.fix].filter(Boolean).join('\n\n'),html:sec(c.kind==='lesson'?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',c.diag)+sec('IC',c.ics)+sec(c.kind==='lesson'?'အထူးသတိထားရန်':'ပြင်နည်း',c.fix)+sec('တူတဲ့ Model / Platform',c.applies)+sec('ဆရာ / Source',c.source)};
       viewRender();openView(c.model,`${c.error} — အပြည့်`,false)}}
   else if(a==='sol'){openSol.add(c.id);render();const t=document.querySelector(`textarea[data-sol="${c.id}"]`);if(t)t.focus()}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
