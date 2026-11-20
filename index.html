@@ -39,6 +39,7 @@ button,.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid v
 button.pri{background:var(--red);border-color:var(--red);color:#fff}
 button:disabled{opacity:.5;cursor:wait}
 button.sm{min-height:36px;padding:0 12px;font-size:14px}
+[hidden]{display:none!important}
 .chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:600}.chk input{width:22px;height:22px}
 details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
 .panel{background:var(--panel);color:var(--panelInk);border-radius:14px;padding:16px;border:1px solid #000}
@@ -114,6 +115,13 @@ body.lock{overflow:hidden}
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
   <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
   <p class="sync" id="sync">Sync စစ်နေသည်…</p>
+  <div id="gdBox" hidden style="margin-top:10px">
+    <div class="row"><button class="sm pri" id="gdBtn">Google Drive နဲ့ Sync ချိတ်</button><button class="sm" id="gdNow" hidden>ယခု Sync</button></div>
+    <p class="status" id="gdStat" style="margin:6px 0 0"></p>
+    <details id="gdCfg" style="margin-top:6px"><summary>Google Client ID ထည့်ရန်</summary>
+      <div class="row" style="margin-top:6px"><input id="gdIdIn" placeholder="xxxx.apps.googleusercontent.com" style="flex:1;min-width:0"><button class="sm" id="gdIdSave">သိမ်း</button></div>
+    </details>
+  </div>
 </header>
 
 <main class="band" style="padding-top:6px">
@@ -342,7 +350,8 @@ async function addImages(c,files){
 /* ---- storage: shared db, local fallback ---- */
 const LK='repairFormulaCases';
 const loadLocal=()=>{try{return JSON.parse(localStorage.getItem(LK)||'[]')}catch(e){return[]}};
-const saveLocal=()=>{try{localStorage.setItem(LK,JSON.stringify(cases))}catch(e){}};
+const writeLocal=()=>{try{localStorage.setItem(LK,JSON.stringify(cases));return true}catch(e){toast(gd.token?'Browser နေရာပြည့်နေပြီ — Google Drive မှာတော့ သိမ်းထားမယ်':'Browser နေရာပြည့်နေပြီ — မသိမ်းနိုင်ပါ! Google Drive sync ချိတ်ပါ');return false}};
+const saveLocal=()=>{writeLocal();gdSchedule()};
 async function put(o){
   o.id=o.id||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   o.updated=Date.now();o.created=o.created||o.updated;
@@ -353,7 +362,92 @@ async function put(o){
 }
 async function del(id){
   if(mode==='db')await db.collection('cases').doc(id).delete();
-  else{cases=cases.filter(c=>c.id!==id);saveLocal();render()}
+  else{const d=loadDel();d[id]=Date.now();saveDel(d);cases=cases.filter(c=>c.id!==id);saveLocal();render()}
+}
+
+/* ---- Google Drive sync (GitHub Pages / outside Claude) ---- */
+const GD_CLIENT_ID='';   /* Google Cloud OAuth Web client ID — ဒီမှာထည့်ရင် ဖုန်းတိုင်းမှာ ထပ်ထည့်စရာမလို */
+const GD_FILE='repair-formula-log.json',GD_API='https://www.googleapis.com';
+const DK=LK+'_deleted';
+const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
+const loadDel=()=>{try{return JSON.parse(ls(DK)||'{}')||{}}catch(e){return{}}};
+const saveDel=d=>ls(DK,JSON.stringify(d));
+const gd={token:null,exp:0,client:null,fileId:ls('gdFileId')||null,busy:false,again:false,t:null};
+const gdId=()=>GD_CLIENT_ID||ls('gdClientId')||'';
+const gdStat=t=>{$('gdStat').textContent=t};
+function gdSchedule(){if(gd.token&&mode==='local'){clearTimeout(gd.t);gd.t=setTimeout(gdSync,1500)}}
+function gdMerge(a,b,delA,delB){
+  const del={...delB};for(const k in delA)del[k]=Math.max(del[k]||0,delA[k]);
+  const m=new Map();[...a,...b].forEach(c=>{if(!c||!c.id)return;const o=m.get(c.id);if(!o||(c.updated||0)>(o.updated||0))m.set(c.id,c)});
+  return{cases:[...m.values()].filter(c=>!((del[c.id]||0)>=(c.updated||0))),deleted:del};
+}
+async function gdFetch(path,opt={}){
+  const r=await fetch(GD_API+path,{...opt,headers:{...(opt.headers||{}),Authorization:'Bearer '+gd.token}});
+  if(r.status===401){gd.token=null;throw new Error('auth')}
+  if(!r.ok){const e=new Error('Drive '+r.status);e.status=r.status;throw e}
+  return r;
+}
+async function gdFind(){
+  if(gd.fileId)return gd.fileId;
+  const q=encodeURIComponent(`name='${GD_FILE}' and trashed=false`);
+  const j=await (await gdFetch(`/drive/v3/files?q=${q}&spaces=drive&orderBy=modifiedTime%20desc&fields=files(id)`)).json();
+  gd.fileId=(j.files&&j.files[0]&&j.files[0].id)||null;if(gd.fileId)ls('gdFileId',gd.fileId);return gd.fileId;
+}
+async function gdRead(){
+  const id=await gdFind();if(!id)return null;
+  try{return await (await gdFetch(`/drive/v3/files/${id}?alt=media`)).json()}
+  catch(e){if(e.status===404){gd.fileId=null;ls('gdFileId',null);return gdRead()}throw e}
+}
+async function gdWrite(data){
+  const body=JSON.stringify(data);
+  if(gd.fileId){
+    try{await gdFetch(`/upload/drive/v3/files/${gd.fileId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body});return}
+    catch(e){if(e.status!==404)throw e;gd.fileId=null;ls('gdFileId',null)}
+  }
+  const bd='rfl'+Date.now().toString(36);
+  const mp=`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:GD_FILE,mimeType:'application/json'})}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${bd}--`;
+  const j=await (await gdFetch('/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+bd},body:mp})).json();
+  gd.fileId=j.id;ls('gdFileId',j.id);
+}
+async function gdSync(){
+  if(mode!=='local'||!gd.token)return;
+  if(Date.now()>gd.exp){gd.token=null;return gdOff('Google ချိတ်ဆက်မှု သက်တမ်းကုန်ပြီ — "Sync ပြန်ချိတ်" နှိပ်ပါ')}
+  if(gd.busy){gd.again=true;return}
+  gd.busy=true;gdStat('Google Drive နဲ့ Sync လုပ်နေသည်…');
+  try{
+    const remote=await gdRead();
+    const r=gdMerge(cases,(remote&&remote.cases)||[],loadDel(),(remote&&remote.deleted)||{});
+    cases=r.cases;saveDel(r.deleted);writeLocal();render();
+    await gdWrite({app:'repair-formula-log',v:1,at:new Date().toISOString(),cases,deleted:r.deleted});
+    gdStat(`Google Drive (${GD_FILE}) မှာ သိမ်းပြီး · ${new Date().toLocaleTimeString()} · ${cases.length} ခု`);
+    setSync('Google Drive Sync ဖွင့်ထားတယ်','ok');
+  }catch(e){
+    if(e.message==='auth')gdOff('Google ချိတ်ဆက်မှု ပြတ်သွားပြီ — "Sync ပြန်ချိတ်" နှိပ်ပါ');
+    else gdStat('Drive Sync မရပါ ('+(e.message||e)+') — အင်တာနက် စစ်ပြီး "ယခု Sync" နှိပ်ပါ');
+  }
+  gd.busy=false;if(gd.again){gd.again=false;gdSync()}
+}
+function gdOff(msg){gd.token=null;$('gdBtn').hidden=false;$('gdBtn').textContent='Sync ပြန်ချိတ်';$('gdNow').hidden=true;setSync('Google Drive Sync ပြတ်နေတယ်','off');gdStat(msg)}
+function gdConnect(){
+  const id=gdId();if(!id){$('gdCfg').open=true;return toast('Google Client ID အရင်ထည့်ပါ')}
+  if(!(window.google&&google.accounts&&google.accounts.oauth2))return toast('Google ချိတ်ဖို့ ပြင်ဆင်နေသည် — ခဏနေ ထပ်နှိပ်ပါ');
+  if(!gd.client)gd.client=google.accounts.oauth2.initTokenClient({client_id:id,scope:'https://www.googleapis.com/auth/drive.file',
+    callback:r=>{if(!r||r.error)return gdStat('Google ချိတ်မရပါ: '+((r&&r.error)||''));
+      gd.token=r.access_token;gd.exp=Date.now()+((+r.expires_in||3600)-60)*1000;ls('gdOn','1');
+      $('gdBtn').hidden=true;$('gdNow').hidden=false;gdSync()},
+    error_callback:e=>gdStat('Google ချိတ်မရပါ: '+((e&&e.type)||''))});
+  gd.client.requestAccessToken({prompt:ls('gdOn')?'':'consent'});
+}
+function gdSetup(){
+  if(window.claude&&claude.use)return;   /* Claude artifact ထဲမှာ Claude sync ကိုပဲ သုံး */
+  $('gdBox').hidden=false;$('gdCfg').hidden=!!GD_CLIENT_ID;$('gdIdIn').value=ls('gdClientId')||'';
+  if(ls('gdOn'))$('gdBtn').textContent='Google Drive Sync ပြန်ချိတ်';
+  gdStat(gdId()?'တစ်ခါနှိပ်ပြီး Google အကောင့်နဲ့ ချိတ်ပါ — နောက်ပိုင်း ပြင်တိုင်း Drive မှာ အလိုလို သိမ်းမယ်':'Google Client ID မထည့်ရသေးပါ');
+  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;document.head.appendChild(s);
+  $('gdBtn').onclick=gdConnect;$('gdNow').onclick=gdSync;
+  $('gdIdSave').onclick=()=>{const v=$('gdIdIn').value.trim();if(!/\.apps\.googleusercontent\.com$/.test(v))return toast('Client ID မမှန်ပါ (….apps.googleusercontent.com)');ls('gdClientId',v);gd.client=null;$('gdCfg').open=false;gdStat('သိမ်းပြီး — "Google Drive နဲ့ Sync ချိတ်" နှိပ်ပါ')};
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gdSync()});
+  setInterval(()=>{if(document.visibilityState==='visible')gdSync()},120000);
 }
 function setSync(t,cls){const e=$('sync');e.textContent=t;e.className='sync '+(cls||'')}
 function useLocal(msg){if(mode==='db')return;mode='local';cases=loadLocal();$('store').textContent=msg;setSync('Sync မရ — ဒီ browser ထဲမှာပဲ သိမ်းထားတယ်','off');render()}
@@ -586,6 +680,7 @@ if(window.claude&&claude.use){
     },()=>{clearTimeout(timer);useLocal('Online မချိတ်ရ — browser ထဲမှာ သိမ်းထားပါတယ်')});
   }).catch(()=>{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')});
 }else{clearTimeout(timer);useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')}
+gdSetup();
 }
 </script>
 </body>
