@@ -148,6 +148,41 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .vhead button{border-color:#f2f4f5;color:#f2f4f5}
 .vbody{flex:1;overflow:auto;padding:18px max(4vw,14px) 40px;white-space:pre-wrap;font-size:17px;line-height:1.75;max-width:900px;width:100%;margin:0 auto;overflow-wrap:anywhere}
 body.lock{overflow:hidden}
+.vbody.md{white-space:normal;font-size:16px;line-height:1.75;overflow-wrap:break-word}
+.md>:first-child{margin-top:0}
+.md h2,.md h3,.md h4,.md h5{font-family:"Inter Tight","Noto Sans Myanmar",sans-serif;line-height:1.4;margin:26px 0 10px}
+.md h2{font-size:21px;padding-left:10px;border-left:4px solid var(--red)}
+.md h3{font-size:19px;padding:0 0 6px 10px;border-left:4px solid var(--red);border-bottom:1px solid var(--line)}
+.md h4{font-size:17px;color:var(--red)}.md h5{font-size:16px}
+.md p{margin:0 0 12px}
+.md strong{font-weight:700}
+.md em{font-style:normal;color:var(--mute)}
+.md code{font:600 .86em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:0 5px;overflow-wrap:anywhere}
+.md ul,.md ol{margin:0 0 14px;padding-left:24px}
+.md li{margin:6px 0}.md li>ul,.md li>ol{margin:6px 0 4px}
+.md li::marker{color:var(--red);font-weight:700}
+.md hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+.md blockquote{margin:0 0 14px;padding:10px 14px;border-left:3px solid var(--line);background:var(--bg);border-radius:0 8px 8px 0}
+.md blockquote>:last-child{margin-bottom:0}
+.md a{color:var(--red);font-weight:600}
+.md .tbl{overflow-x:auto;margin:4px 0 18px;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
+.md table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.55}
+.md th{background:var(--panel);color:var(--panelInk);text-align:left;font-weight:600;padding:9px 10px;vertical-align:bottom}
+.md td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:top;min-width:9em}
+.md td:first-child{min-width:7em;font-weight:600}
+.md tbody tr:nth-child(even) td{background:var(--bg)}
+.md th code,.md td code{white-space:nowrap}
+@media(max-width:700px){   /* phones: each table row becomes a small card */
+  .md .tbl{overflow:visible;border:0;border-radius:0}
+  .md table,.md tbody,.md tr,.md td{display:block;width:100%}
+  .md thead{display:none}
+  .md tr{border:1px solid var(--line);border-radius:12px;margin:0 0 10px;overflow:hidden;background:var(--card)}
+  .md tbody tr:nth-child(even) td{background:transparent}
+  .md td{border-top:1px solid var(--line);padding:8px 12px;min-width:0}
+  .md td:first-child{border-top:0;background:var(--panel)!important;color:var(--panelInk);font-size:15px}
+  .md td:first-child code{background:#2b3137;border-color:#3a4249;color:#f2f4f5}
+  .md td[data-l]:not(:first-child)::before{content:attr(data-l);display:block;font-size:12px;font-weight:600;color:var(--mute);margin-bottom:2px}
+}
 .nosol{font-size:13px;color:var(--mute);margin-top:8px}
 .empty{color:var(--mute);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:14px}
 @media(prefers-reduced-motion:reduce){.toast{transition:none}}
@@ -509,6 +544,60 @@ async function showAccount(){
   setSync(who?`Sync ဖွင့်ထားတယ် — ${who}`:'Sync ဖွင့်ထားတယ် — Claude အကောင့်နဲ့','ok');
 }
 
+
+/* ---- Gemini Markdown → tidy HTML (text is escaped first) ---- */
+const MD_LI=/^(\s*)([*+-]|\d+[.)])\s+(.*)$/;
+const mdStart=l=>/^\s*#{1,6}\s/.test(l)||/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)||/^\s*\|/.test(l)||MD_LI.test(l)||/^\s*>/.test(l);
+function mdInl(x){
+  let t=esc(x).replace(/&lt;br\s*\/?&gt;/gi,'<br>');
+  const codes=[];t=t.replace(/`([^`]+)`/g,(_,c)=>(codes.push(c),`\u0000${codes.length-1}\u0000`));
+  t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/__(.+?)__/g,'<strong>$1</strong>')
+   .replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\w)/g,'$1<em>$2</em>')
+   .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+   .replace(/\*\*/g,'');
+  return t.replace(/\u0000(\d+)\u0000/g,(_,i)=>`<code>${codes[i]}</code>`);
+}
+function md(src){
+  const raw=String(src||'').replace(/\r/g,'').split('\n'),L=[];
+  for(let i=0;i<raw.length;i++){let l=raw[i];   /* table rows Gemini broke over several lines */
+    if(/^\s*\|/.test(l))while(!/\|\s*$/.test(l)&&i+1<raw.length){i++;if(raw[i].trim())l+=' '+raw[i].trim()}
+    L.push(l)}
+  const cells=r=>r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(x=>x.trim());
+  let h='',i=0,m;
+  while(i<L.length){
+    const l=L[i];
+    if(!l.trim()){i++;continue}
+    if(m=l.match(/^\s*(#{1,6})\s+(.*)$/)){const n=[0,2,2,3,4,5,5][m[1].length];h+=`<h${n}>${mdInl(m[2].replace(/\s#+\s*$/,''))}</h${n}>`;i++;continue}
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)){h+='<hr>';i++;continue}
+    if(/^\s*\|/.test(l)){
+      const rows=[];while(i<L.length&&/^\s*\|/.test(L[i])){rows.push(cells(L[i]));i++}
+      const sep=rows.findIndex(r=>r.every(c=>/^:?-{2,}:?$/.test(c)));
+      const head=sep===1?rows[0]:null,body=rows.filter((r,k)=>k!==sep&&!(head&&k===0));
+      h+=`<div class="tbl"><table>${head?`<thead><tr>${head.map(c=>`<th>${mdInl(c)}</th>`).join('')}</tr></thead>`:''}<tbody>${body.map(r=>`<tr>${r.map((c,k)=>`<td${head&&head[k]?` data-l="${esc(head[k].replace(/[*`]/g,''))}"`:''}>${mdInl(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;continue}
+    if(/^\s*>/.test(l)){const q=[];while(i<L.length&&/^\s*>/.test(L[i])){q.push(L[i].replace(/^\s*>\s?/,''));i++}h+=`<blockquote>${md(q.join('\n'))}</blockquote>`;continue}
+    if(MD_LI.test(l)){
+      const items=[];
+      while(i<L.length){const x=L[i];
+        if(m=x.match(MD_LI)){items.push({ind:m[1].replace(/\t/g,'    ').length,ord:/\d/.test(m[2]),num:parseInt(m[2])||1,text:m[3]});i++;continue}
+        if(!x.trim()){let j=i+1;while(j<L.length&&!L[j].trim())j++;if(j<L.length&&MD_LI.test(L[j])){i=j;continue}break}
+        if(/^\s{2,}\S/.test(x)&&!mdStart(x)){items[items.length-1].text+='\n'+x.trim();i++;continue}
+        break}
+      const st=[];
+      for(const it of items){
+        while(st.length&&(it.ind<st[st.length-1].ind||(it.ind===st[st.length-1].ind&&it.ord!==st[st.length-1].ord))){h+=`</li></${st.pop().tag}>`}
+        const top=st[st.length-1];
+        if(!top||it.ind>top.ind){const tag=it.ord?'ol':'ul';st.push({ind:it.ind,ord:it.ord,tag});h+=`<${tag}${it.ord&&it.num>1?` start="${it.num}"`:''}>`}
+        else h+='</li>';
+        h+=`<li>${it.text.split('\n').map(mdInl).join('<br>')}`;
+      }
+      while(st.length)h+=`</li></${st.pop().tag}>`;
+      continue}
+    const p=[];while(i<L.length&&L[i].trim()&&(!p.length||!mdStart(L[i]))){p.push(L[i]);i++}
+    h+=`<p>${p.map(x=>mdInl(x.trim())).join('<br>')}</p>`;
+  }
+  return h;
+}
+
 /* ---- list grouped by model ---- */
 function card(c){
   const L=c.kind==='lesson',imgs=c.imgs||[];
@@ -749,7 +838,8 @@ $('list').addEventListener('click',async e=>{
   }
   else if(a==='savesol'){const t=document.querySelector(`textarea[data-sol="${c.id}"]`);const v=t?fixMM(t.value).text.trim():'';if(!v)return toast('Gemini အဖြေကို paste လုပ်ပါ');
     try{openSol.delete(c.id);if(t)t.value='';await put({...c,ai:v});toast(`Solution ကို ${c.model} အောက်မှာ သိမ်းပြီ`);if(mode!=='db')render()}catch(x){toast('သိမ်းမရပါ')}}
-  else if(a==='view'||a==='note'){const isNote=a==='note';viewCase={text:isNote?c.note:c.ai};$('vBody').textContent=viewCase.text||'';openView(c.model,`${c.error} — ${isNote?'မူရင်းစာ':'ဖုန်း Solution'}`,false)}
+  else if(a==='view'||a==='note'){const isNote=a==='note';viewCase={text:isNote?c.note:c.ai};
+    $('vBody').classList.toggle('md',!isNote);if(isNote)$('vBody').textContent=viewCase.text||'';else $('vBody').innerHTML=md(viewCase.text);openView(c.model,`${c.error} — ${isNote?'မူရင်းစာ':'ဖုန်း Solution'}`,false)}
   else if(a==='sol'){openSol.add(c.id);render();const t=document.querySelector(`textarea[data-sol="${c.id}"]`);if(t)t.focus()}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
   else if(a==='del'){
