@@ -105,8 +105,12 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
 .search{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0 6px}
-.chips{display:flex;gap:6px;margin-top:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
-.chips::-webkit-scrollbar{display:none}
+.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:4px}
+@media(min-width:760px){.filters{grid-template-columns:2fr 1fr 1fr}.fwide{grid-column:auto!important}}
+.fwide{grid-column:1/-1}
+.fsel{margin:0;display:grid;gap:2px;font-size:12px;font-weight:600;color:var(--mute)}
+.fsel select{width:100%;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 10px;font:15px Inter,"Noto Sans Myanmar",sans-serif}
+.fsel select.on{border:2px solid var(--red)}
 .chip{flex:none;white-space:nowrap;min-height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:14px;font-weight:500}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .group{margin-top:18px}
@@ -201,8 +205,11 @@ body.lock{overflow:hidden}
   <div class="search">
     <input id="q" type="search" placeholder="ရှာရန်: model, error, IC (ဥပမာ 12R, PM7250B)">
   </div>
-  <div class="chips" id="kinds"></div>
-  <div class="chips" id="chips"></div>
+  <div class="filters">
+    <label class="fsel fwide"><span>ဖုန်း Model</span><select id="fModel"></select></label>
+    <label class="fsel"><span>Error</span><select id="fErr"></select></label>
+    <label class="fsel"><span>အမျိုးအစား</span><select id="fKind"></select></label>
+  </div>
   <div id="list"></div>
 </section>
 
@@ -239,7 +246,7 @@ const zg2uni=t=>ZG.reduce((x,[f,r])=>x.replace(new RegExp(f,'g'),r),t);
 const isZg=t=>/(^|[^\u1000-\u109f])[\u1031\u103b]|[\u105a\u1060-\u1097]|\u1039(?![\u1000-\u1021])/.test(t);
 const fixMM=t=>{let n=0;const out=String(t||'').split('\n').map(l=>isZg(l)?(n++,zg2uni(l)):l).join('\n');return{text:out,changed:n>0}};
 const ERR=['Baseband Unknown','No power','Charging error','Not charging','Radio Off','No service','No signal','Hang logo','Restart','Dead','No display','No touch','Network error','Wifi error','Bluetooth error','No sound','Mic error','Camera error','Short'];
-let cases=[],db=null,sample=null,mode='wait',filter='',chip='',kind='';
+let cases=[],db=null,sample=null,mode='wait',filter='',chip='',kind='',fmodel='';
 
 const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000)};
 const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('ကူးပြီးပါပြီ')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('ကူးပြီးပါပြီ')}catch(x){toast('ကူးမရပါ')}a.remove()}};
@@ -552,10 +559,15 @@ function render(){
   cases.sort((a,b)=>(b.created||0)-(a.created||0));
   const errs=[...new Set(cases.map(c=>(c.error||'').replace(/error/i,'').trim()).filter(Boolean))];
   const kinds=[['','အားလုံး'],['case','Repair case'],['lesson','Shortcut သင်ခန်းစာ']];
-  $('kinds').innerHTML=kinds.map(([k,l])=>`<button class="chip ${kind===k?'on':''}" data-kind="${k}">${l} (${k?cases.filter(c=>(c.kind||'case')===k).length:cases.length})</button>`).join('');
-  $('chips').innerHTML=['',...errs].map(e=>`<button class="chip ${chip===e?'on':''}" data-chip="${esc(e)}">${e?esc(e):'အားလုံး'}</button>`).join('');
+  const models=new Map();cases.forEach(c=>{const k=mkey(c.model);if(!k)return;const m=models.get(k)||{name:c.model,n:0};m.n++;models.set(k,m)});
+  if(fmodel&&!models.has(fmodel))fmodel='';if(chip&&!errs.includes(chip))chip='';
+  const opt=(v,l,sel)=>`<option value="${esc(v)}"${sel?' selected':''}>${esc(l)}</option>`;
+  $('fModel').innerHTML=opt('',`Model အားလုံး (${models.size})`,!fmodel)+[...models].sort((a,b)=>a[1].name.localeCompare(b[1].name)).map(([k,m])=>opt(k,`${m.name} (${m.n})`,fmodel===k)).join('');
+  $('fErr').innerHTML=opt('','အားလုံး',!chip)+errs.sort().map(e=>opt(e,`${e} (${cases.filter(c=>(c.error||'').toLowerCase().includes(e.toLowerCase())).length})`,chip===e)).join('');
+  $('fKind').innerHTML=kinds.map(([k,l])=>opt(k,`${l} (${k?cases.filter(c=>(c.kind||'case')===k).length:cases.length})`,kind===k)).join('');
+  $('fModel').classList.toggle('on',!!fmodel);$('fErr').classList.toggle('on',!!chip);$('fKind').classList.toggle('on',!!kind);
   const q=filter.toLowerCase();
-  const show=cases.filter(c=>(!kind||(c.kind||'case')===kind)&&(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.title,c.diag,c.ics,c.fix,c.source,c.applies,c.ai].join(' ').toLowerCase().includes(q)));
+  const show=cases.filter(c=>(!kind||(c.kind||'case')===kind)&&(!fmodel||mkey(c.model)===fmodel)&&(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.title,c.diag,c.ics,c.fix,c.source,c.applies,c.ai].join(' ').toLowerCase().includes(q)));
   $('count').textContent=`(${show.length}/${cases.length})`;
   const groups=new Map();
   show.forEach(c=>{const k=mkey(c.model);if(!groups.has(k))groups.set(k,{name:c.model,items:[]});groups.get(k).items.push(c)});
@@ -704,8 +716,9 @@ $('vClose').onclick=closeView;
 $('vCopy').onclick=()=>{if(viewCase&&viewCase.text)copy(viewCase.text);else toast('ပုံကို ဖိထားပြီး save လုပ်ပါ')};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('viewer').classList.contains('on'))closeView()});
 $('q').addEventListener('input',e=>{filter=e.target.value;render()});
-$('kinds').addEventListener('click',e=>{const b=e.target.closest('[data-kind]');if(!b)return;kind=b.dataset.kind;render()});
-$('chips').addEventListener('click',e=>{const b=e.target.closest('[data-chip]');if(!b)return;chip=b.dataset.chip;render()});
+$('fKind').addEventListener('change',e=>{kind=e.target.value;render()});
+$('fErr').addEventListener('change',e=>{chip=e.target.value;render()});
+$('fModel').addEventListener('change',e=>{fmodel=e.target.value;render()});
 $('list').addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b)return;const c=cases.find(x=>x.id===b.dataset.id);if(!c)return;
   const a=b.dataset.act;
