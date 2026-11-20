@@ -148,6 +148,9 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .vhead button{border-color:#f2f4f5;color:#f2f4f5}
 .vbody{flex:1;overflow:auto;padding:18px max(4vw,14px) 40px;white-space:pre-wrap;font-size:17px;line-height:1.75;max-width:900px;width:100%;margin:0 auto;overflow-wrap:anywhere}
 body.lock{overflow:hidden}
+.vta{width:100%;min-height:calc(100vh - 150px);min-height:calc(100dvh - 150px);font:15px/1.7 Inter,"Noto Sans Myanmar",sans-serif;resize:none;background:var(--bg)}
+.vhead{flex-wrap:nowrap}.vhead .sm{padding:0 10px}
+.fullbtn{width:100%;justify-content:space-between;min-height:42px;font-size:14px;border-color:var(--line);background:var(--bg)}
 .vbody.md{white-space:normal;font-size:16px;line-height:1.75;overflow-wrap:break-word}
 .md>:first-child{margin-top:0}
 .md h2,.md h3,.md h4,.md h5{font-family:"Inter Tight","Noto Sans Myanmar",sans-serif;line-height:1.4;margin:26px 0 10px}
@@ -268,8 +271,10 @@ body.lock{overflow:hidden}
   <div class="vhead">
     <h2 id="vTitle"></h2>
     <button class="sm" id="vSave" hidden>⬇ Save</button>
+    <button class="sm" id="vEdit" hidden>✎ ပြင်</button>
+    <button class="sm" id="vCancel" hidden>မပြင်တော့</button>
     <button class="sm" id="vCopy">ကူး</button>
-    <button class="sm" id="vClose" aria-label="ပိတ်">✕ ပိတ်</button>
+    <button class="sm" id="vClose" aria-label="ပိတ်">✕</button>
   </div>
   <div class="vbody" id="vBody"></div>
 </div>
@@ -456,7 +461,7 @@ const DK=LK+'_deleted';
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
 const loadDel=()=>{try{return JSON.parse(ls(DK)||'{}')||{}}catch(e){return{}}};
 const saveDel=d=>ls(DK,JSON.stringify(d));
-const gd={token:null,exp:0,client:null,fileId:ls('gdFileId')||null,busy:false,again:false,t:null};
+const gd={armed:false,token:null,exp:0,client:null,fileId:ls('gdFileId')||null,busy:false,again:false,t:null};
 const gdId=()=>GD_CLIENT_ID||ls('gdClientId')||'';
 const gdStat=t=>{$('gdStat').textContent=t};
 function gdSchedule(){if(gd.token&&mode==='local'){clearTimeout(gd.t);gd.t=setTimeout(gdSync,1500)}}
@@ -495,7 +500,7 @@ async function gdWrite(data){
 }
 async function gdSync(){
   if(mode!=='local'||!gd.token)return;
-  if(Date.now()>gd.exp){gd.token=null;return gdOff('Google ချိတ်ဆက်မှု သက်တမ်းကုန်ပြီ — "Sync ပြန်ချိတ်" နှိပ်ပါ')}
+  if(Date.now()>gd.exp){gd.token=null;return gdOff('Google ချိတ်ဆက်မှု သက်တမ်းကုန်ပြီ — Screen ကို တစ်ချက်နှိပ်ရင် ပြန်ချိတ်မယ်')}
   if(gd.busy){gd.again=true;return}
   gd.busy=true;gdStat('Google Drive နဲ့ Sync လုပ်နေသည်…');
   try{
@@ -506,18 +511,25 @@ async function gdSync(){
     gdStat(`Google Drive (${GD_FILE}) မှာ သိမ်းပြီး · ${new Date().toLocaleTimeString()} · ${cases.length} ခု`);
     setSync('Google Drive Sync ဖွင့်ထားတယ်','ok');
   }catch(e){
-    if(e.message==='auth')gdOff('Google ချိတ်ဆက်မှု ပြတ်သွားပြီ — "Sync ပြန်ချိတ်" နှိပ်ပါ');
+    if(e.message==='auth')gdOff('Google ချိတ်ဆက်မှု ပြတ်သွားပြီ — Screen ကို တစ်ချက်နှိပ်ရင် ပြန်ချိတ်မယ်');
     else gdStat('Drive Sync မရပါ ('+(e.message||e)+') — အင်တာနက် စစ်ပြီး "ယခု Sync" နှိပ်ပါ');
   }
   gd.busy=false;if(gd.again){gd.again=false;gdSync()}
 }
-function gdOff(msg){gd.token=null;$('gdBtn').hidden=false;$('gdBtn').textContent='Sync ပြန်ချိတ်';$('gdNow').hidden=true;setSync('Google Drive Sync ပြတ်နေတယ်','off');gdStat(msg)}
+function gdArm(){if(!gd.armed&&ls('gdOn')){gd.armed=true;document.addEventListener('click',gdAuto,true)}}
+function gdAuto(e){   /* first tap after reload / expiry → reconnect quietly (a tap is needed for Google's popup) */
+  if(gd.token||!ls('gdOn')){document.removeEventListener('click',gdAuto,true);gd.armed=false;return}
+  if(e.target.closest&&e.target.closest('#gdBtn'))return;
+  if(!(window.google&&google.accounts&&google.accounts.oauth2))return;
+  document.removeEventListener('click',gdAuto,true);gd.armed=false;gdStat('Google Drive နဲ့ ပြန်ချိတ်နေသည်…');gdConnect();
+}
+function gdOff(msg){gd.token=null;ls('gdTok',null);gdArm();$('gdBtn').hidden=false;$('gdBtn').textContent='Sync ပြန်ချိတ်';$('gdNow').hidden=true;setSync('Google Drive Sync ပြတ်နေတယ်','off');gdStat(msg)}
 function gdConnect(){
   const id=gdId();if(!id){$('gdCfg').open=true;return toast('Google Client ID အရင်ထည့်ပါ')}
   if(!(window.google&&google.accounts&&google.accounts.oauth2))return toast('Google ချိတ်ဖို့ ပြင်ဆင်နေသည် — ခဏနေ ထပ်နှိပ်ပါ');
   if(!gd.client)gd.client=google.accounts.oauth2.initTokenClient({client_id:id,scope:'https://www.googleapis.com/auth/drive.file',
     callback:r=>{if(!r||r.error)return gdStat('Google ချိတ်မရပါ: '+((r&&r.error)||''));
-      gd.token=r.access_token;gd.exp=Date.now()+((+r.expires_in||3600)-60)*1000;ls('gdOn','1');
+      gd.token=r.access_token;gd.exp=Date.now()+((+r.expires_in||3600)-60)*1000;ls('gdOn','1');ls('gdTok',JSON.stringify({t:gd.token,exp:gd.exp}));
       $('gdBtn').hidden=true;$('gdNow').hidden=false;gdSync()},
     error_callback:e=>gdStat('Google ချိတ်မရပါ: '+((e&&e.type)||''))});
   gd.client.requestAccessToken({prompt:ls('gdOn')?'':'consent'});
@@ -525,8 +537,12 @@ function gdConnect(){
 function gdSetup(){
   if(window.claude&&claude.use)return;   /* Claude artifact ထဲမှာ Claude sync ကိုပဲ သုံး */
   $('gdBox').hidden=false;$('gdCfg').hidden=!!GD_CLIENT_ID;$('gdIdIn').value=ls('gdClientId')||'';
-  if(ls('gdOn'))$('gdBtn').textContent='Google Drive Sync ပြန်ချိတ်';
-  gdStat(gdId()?'တစ်ခါနှိပ်ပြီး Google အကောင့်နဲ့ ချိတ်ပါ — နောက်ပိုင်း ပြင်တိုင်း Drive မှာ အလိုလို သိမ်းမယ်':'Google Client ID မထည့်ရသေးပါ');
+  let tk=null;try{tk=JSON.parse(ls('gdTok')||'null')}catch(e){}
+  if(ls('gdOn')&&tk&&tk.t&&tk.exp>Date.now()+30000){   /* still valid from last time → no need to tap */
+    gd.token=tk.t;gd.exp=tk.exp;$('gdBtn').hidden=true;$('gdNow').hidden=false;setSync('Google Drive Sync ဖွင့်ထားတယ်','ok');setTimeout(gdSync,300);
+  }else if(ls('gdOn')){
+    $('gdBtn').textContent='Google Drive Sync ပြန်ချိတ်';gdStat('Screen ကို တစ်ချက်နှိပ်လိုက်တာနဲ့ Google Drive ကို အလိုလို ပြန်ချိတ်မယ်');gdArm();
+  }else gdStat(gdId()?'တစ်ခါနှိပ်ပြီး Google အကောင့်နဲ့ ချိတ်ပါ — နောက်ပိုင်း ပြင်တိုင်း Drive မှာ အလိုလို သိမ်းမယ်':'Google Client ID မထည့်ရသေးပါ');
   const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;document.head.appendChild(s);
   $('gdBtn').onclick=gdConnect;$('gdNow').onclick=gdSync;
   $('gdIdSave').onclick=()=>{const v=$('gdIdIn').value.trim();if(!/\.apps\.googleusercontent\.com$/.test(v))return toast('Client ID မမှန်ပါ (….apps.googleusercontent.com)');ls('gdClientId',v);gd.client=null;$('gdCfg').open=false;gdStat('သိမ်းပြီး — "Google Drive နဲ့ Sync ချိတ်" နှိပ်ပါ')};
@@ -603,6 +619,8 @@ function card(c){
   const L=c.kind==='lesson',imgs=c.imgs||[];
   const fld=(k,v)=>v?`<div><span class="k">${k}</span><div class="v">${v}</div></div>`:'';
   const br=t=>esc(t).replace(/\n/g,'<br>');
+  let cut=false;const short=t=>{const ls_=String(t||'').split('\n').filter(x=>x.trim());let o=ls_.slice(0,3).join('\n');if(ls_.length>3||o.length>160){cut=true;o=o.slice(0,160).replace(/\s+\S*$/,'')+' …'}return br(o)};
+  const sd=c.diag&&short(c.diag),sf=c.fix&&short(c.fix);
   const open=openCards.has(c.id);
   const peek=String(c.fix||c.diag||'').split('\n').find(Boolean)||'';
   return `<article class="card case${L?' lesson':''}${open?' open':''}">
@@ -618,13 +636,13 @@ function card(c){
     ${open?`<div class="cbody">
     ${L&&c.title?`<p class="ltitle">${esc(c.title)}</p>`:''}
     <div class="fields">
-      ${fld(L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',c.diag&&br(c.diag))}
+      ${fld(L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',sd)}
       ${fld('IC',c.ics&&icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join(''))}
-      ${fld(L?'အထူးသတိထားရန်':'ပြင်နည်း',c.fix&&br(c.fix))}
+      ${fld(L?'အထူးသတိထားရန်':'ပြင်နည်း',sf)}
       ${fld('တူတဲ့ Model / Platform',c.applies&&esc(c.applies))}
       ${fld('ဆရာ / Source',c.source&&esc(c.source))}
     </div>
-    ${c.note&&L?`<button class="sm" data-act="note" data-id="${c.id}">မူရင်းစာ အပြည့်ကြည့်</button>`:''}
+    ${c.note||cut?`<button class="fullbtn" data-act="note" data-id="${c.id}"><span>မူရင်းစာ အပြည့်ကြည့်</span><span>›</span></button>`:''}
     <div class="gem">
       <p class="gl">GEMINI — ${esc(c.model)}</p>
       <div class="g2">
@@ -797,9 +815,24 @@ $('bkImport').onclick=async()=>{
   let list;try{const j=JSON.parse($('bkIn').value);list=(j.cases||j).filter(c=>c&&c.model)}catch(e){return toast('Backup စာသား မမှန်ပါ')}
   try{const r=await addMany(list.map(c=>({...c,id:undefined})),false);$('bkIn').value='';toast(`အသစ် ${r.added} ခု ထည့်ပြီ၊ ရှိပြီးသား ${r.dup} ခု`)}catch(e){toast('ထည့်မရပါ')}
 };
-let viewCase=null;
-const closeView=()=>{$('viewer').classList.remove('on','img');document.body.classList.remove('lock')};
-const openView=(title,sub,isImg)=>{$('vTitle').innerHTML=`${esc(title)}<span class="vsub">${esc(sub)}</span>`;$('vSave').hidden=!isImg;$('vCopy').hidden=!!isImg;
+let viewCase=null,editing=false;
+const closeView=()=>{if(editing&&$('vTa')&&$('vTa').value!==viewCase.text&&!confirm('ပြင်ထားတာ မသိမ်းရသေးပါ — ပိတ်မလား?'))return;
+  editing=false;$('viewer').classList.remove('on','img');document.body.classList.remove('lock')};
+function viewRender(){const v=viewCase,b=$('vBody');
+  if(v.field==='ai'){b.classList.add('md');b.innerHTML=md(v.text)}
+  else if(v.field==='note'){b.classList.remove('md');b.textContent=v.text||''}
+  else{b.classList.add('md');b.innerHTML=v.html||''}}
+function endEdit(){editing=false;$('vEdit').textContent='✎ ပြင်';$('vEdit').classList.remove('pri');$('vCancel').hidden=true;$('vCopy').hidden=false;$('vClose').hidden=false;viewRender()}
+$('vEdit').onclick=async()=>{
+  if(!viewCase||!viewCase.field)return;
+  if(!editing){editing=true;const b=$('vBody');b.classList.remove('md');b.innerHTML='<textarea id="vTa" class="vta" aria-label="ပြင်ရန်"></textarea>';$('vTa').value=viewCase.text||'';
+    $('vEdit').textContent='✓ သိမ်း';$('vEdit').classList.add('pri');$('vCancel').hidden=false;$('vCopy').hidden=true;$('vClose').hidden=true;$('vTa').focus();return}
+  const v=fixMM($('vTa').value).text.trim();const c=cases.find(x=>x.id===viewCase.id);if(!c)return toast('Case မတွေ့တော့ပါ');
+  try{await put({...c,[viewCase.field]:v});viewCase.text=v;endEdit();toast('ပြင်ထားတာ သိမ်းပြီ');if(mode!=='db')render()}catch(e){toast('သိမ်းမရပါ')}
+};
+$('vCancel').onclick=()=>{if($('vTa')&&$('vTa').value!==viewCase.text&&!confirm('ပြင်ထားတာ မသိမ်းဘဲ ထားခဲ့မလား?'))return;endEdit()};
+const openView=(title,sub,isImg)=>{editing=false;$('vTitle').innerHTML=`${esc(title)}<span class="vsub">${esc(sub)}</span>`;$('vSave').hidden=!isImg;$('vCopy').hidden=!!isImg;
+  $('vEdit').hidden=!(viewCase&&viewCase.field);$('vEdit').textContent='✎ ပြင်';$('vEdit').classList.remove('pri');$('vCancel').hidden=true;$('vClose').hidden=false;
   $('viewer').classList.toggle('img',!!isImg);$('vBody').scrollTop=0;$('viewer').classList.add('on');document.body.classList.add('lock');$('vClose').focus()};
 async function saveImg(c,i){
   const im=(c.imgs||[])[i];const src=imgSrc(im);if(!src)return;
@@ -838,8 +871,12 @@ $('list').addEventListener('click',async e=>{
   }
   else if(a==='savesol'){const t=document.querySelector(`textarea[data-sol="${c.id}"]`);const v=t?fixMM(t.value).text.trim():'';if(!v)return toast('Gemini အဖြေကို paste လုပ်ပါ');
     try{openSol.delete(c.id);if(t)t.value='';await put({...c,ai:v});toast(`Solution ကို ${c.model} အောက်မှာ သိမ်းပြီ`);if(mode!=='db')render()}catch(x){toast('သိမ်းမရပါ')}}
-  else if(a==='view'||a==='note'){const isNote=a==='note';viewCase={text:isNote?c.note:c.ai};
-    $('vBody').classList.toggle('md',!isNote);if(isNote)$('vBody').textContent=viewCase.text||'';else $('vBody').innerHTML=md(viewCase.text);openView(c.model,`${c.error} — ${isNote?'မူရင်းစာ':'ဖုန်း Solution'}`,false)}
+  else if(a==='view'){viewCase={id:c.id,field:'ai',text:c.ai||''};viewRender();openView(c.model,`${c.error} — ဖုန်း Solution`,false)}
+  else if(a==='note'){
+    if(c.note){viewCase={id:c.id,field:'note',text:c.note};viewRender();openView(c.model,`${c.error} — မူရင်းစာ`,false)}
+    else{const sec=(k,v)=>v?`<h3>${esc(k)}</h3><p>${esc(v).replace(/\n/g,'<br>')}</p>`:'';
+      viewCase={id:c.id,text:[c.diag,c.fix].filter(Boolean).join('\n\n'),html:sec(c.kind==='lesson'?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',c.diag)+sec('IC',c.ics)+sec(c.kind==='lesson'?'အထူးသတိထားရန်':'ပြင်နည်း',c.fix)};
+      viewRender();openView(c.model,`${c.error} — အပြည့်`,false)}}
   else if(a==='sol'){openSol.add(c.id);render();const t=document.querySelector(`textarea[data-sol="${c.id}"]`);if(t)t.focus()}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
   else if(a==='del'){
