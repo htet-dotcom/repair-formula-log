@@ -52,6 +52,10 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .panel select{background:#1a1e22;color:#f2f4f5;border:1px solid #2e353b;border-radius:10px;min-height:36px;padding:0 8px;font:14px Inter,"Noto Sans Myanmar",sans-serif}
 .panel textarea{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:150px}
 .panel hr{border:0;border-top:1px solid #2e353b;margin:16px 0}
+.sync{display:inline-flex;gap:8px;align-items:center;margin:10px 0 0;padding:6px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600}
+.sync::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--mute)}
+.sync.ok::before{background:var(--ok)}.sync.off::before{background:var(--red)}
+.seen{font-size:13px;font-weight:600;color:var(--mute);margin-left:6px}
 .status{font-size:13px;color:var(--mute);margin:8px 0 0}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
@@ -85,6 +89,7 @@ body.lock{overflow:hidden}
 <header class="band">
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
   <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
+  <p class="sync" id="sync">Sync စစ်နေသည်…</p>
 </header>
 
 <main class="band" style="padding-top:6px">
@@ -146,6 +151,16 @@ body.lock{overflow:hidden}
   <div id="list"></div>
 </section>
 
+<section class="band" aria-labelledby="bh">
+  <details class="card">
+    <summary id="bh">Backup (အရန်သိမ်း / ပြန်ထည့်)</summary>
+    <p class="status" style="margin-top:0">Data အားလုံးကို စာသားအဖြစ် ကူးပြီး Gmail ကိုယ့်ဆီကိုယ် ပို့ထားလို့ရ။ ပြန်လိုရင် ဒီမှာ paste လုပ်ပြီး ပြန်ထည့်ပါ (တူတဲ့ case ထပ်မထည့်ပါ)</p>
+    <div class="row" style="margin:10px 0"><button id="bkCopy">Backup ကူး</button></div>
+    <textarea id="bkIn" placeholder="Backup စာသားကို ဒီမှာ paste"></textarea>
+    <div class="row" style="margin-top:10px"><button id="bkImport">Backup ပြန်ထည့်</button></div>
+  </details>
+</section>
+
 <div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-labelledby="vTitle">
   <div class="vhead">
     <h2 id="vTitle"></h2>
@@ -168,7 +183,7 @@ let cases=[],db=null,sample=null,mode='wait',filter='',chip='';
 const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000)};
 const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('ကူးပြီးပါပြီ')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('ကူးပြီးပါပြီ')}catch(x){toast('ကူးမရပါ')}a.remove()}};
 const icList=s=>String(s||'').split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
-const mkey=m=>String(m||'').toLowerCase().replace(/\s+/g,' ').replace(/[()]/g,'').trim();
+const mkey=m=>String(m||'').toLowerCase().replace(/[\s()\-_]+/g,'');
 
 function read(){const o={};F.forEach(k=>o[k]=$(k).value.trim());o.done=$('done').checked;return o}
 function current(){const id=$('eid').value;const c=cases.find(x=>x.id===id)||{};return{...c,...read(),id:id||undefined}}
@@ -250,7 +265,7 @@ const saveLocal=()=>{try{localStorage.setItem(LK,JSON.stringify(cases))}catch(e)
 async function put(o){
   o.id=o.id||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   o.updated=Date.now();o.created=o.created||o.updated;
-  const data={};['model','error','diag','ics','fix','done','ai','note','created','updated'].forEach(k=>{if(o[k]!==undefined)data[k]=o[k]});
+  const data={};['model','error','diag','ics','fix','done','ai','note','count','created','updated'].forEach(k=>{if(o[k]!==undefined)data[k]=o[k]});
   if(mode==='db')await db.collection('cases').doc(o.id).set(data);
   else{const i=cases.findIndex(c=>c.id===o.id);i<0?cases.unshift({...data,id:o.id}):cases[i]={...data,id:o.id};saveLocal();render()}
   return o;
@@ -259,12 +274,21 @@ async function del(id){
   if(mode==='db')await db.collection('cases').doc(id).delete();
   else{cases=cases.filter(c=>c.id!==id);saveLocal();render()}
 }
-function useLocal(msg){if(mode==='db')return;mode='local';cases=loadLocal();$('store').textContent=msg;render()}
+function setSync(t,cls){const e=$('sync');e.textContent=t;e.className='sync '+(cls||'')}
+function useLocal(msg){if(mode==='db')return;mode='local';cases=loadLocal();$('store').textContent=msg;setSync('Sync မရ — ဒီ browser ထဲမှာပဲ သိမ်းထားတယ်','off');render()}
+async function showAccount(){
+  let who='';
+  try{const u=await claude.use('user');if(u){const me=await u.me();const id=me&&(me.id||me);
+    let p=me&&typeof me==='object'?me:null;
+    if(!(p&&(p.email||p.name))&&u.profiles&&id){const ps=await u.profiles([id]);p=ps&&ps[id]}
+    who=(p&&(p.email||p.name))||''}}catch(e){}
+  setSync(who?`Sync ဖွင့်ထားတယ် — ${who}`:'Sync ဖွင့်ထားတယ် — Claude အကောင့်နဲ့','ok');
+}
 
 /* ---- list grouped by model ---- */
 function card(c){
   return `<article class="card case">
-    <div class="err">${esc(c.error)} <span class="${c.done?'done':''}">${c.done?'✅':'⏳'}</span></div>
+    <div class="err">${esc(c.error)} <span class="${c.done?'done':''}">${c.done?'✅':'⏳'}</span>${(c.count||1)>1?`<span class="seen">ကြုံဖူး ×${c.count}</span>`:''}</div>
     ${c.diag?`<p><span class="k">စစ်ဆေးချက်</span>${esc(c.diag).replace(/\n/g,'<br>')}</p>`:''}
     ${c.ics?`<p><span class="k">IC</span>${icList(c.ics).map(i=>`<span class="tag">${esc(i)}</span>`).join('')}</p>`:''}
     ${c.fix?`<p><span class="k">ပြင်နည်း</span>${esc(c.fix).replace(/\n/g,'<br>')}</p>`:''}
@@ -306,13 +330,40 @@ $('splitBtn').onclick=async()=>{
   b.disabled=false;b.textContent='ခွဲပြီး သိမ်းမယ်';
   if(!list.length)return toast('ခွဲမရပါ — ဖုန်း model ကို ပထမစာကြောင်းမှာ ရေးပါ');
   const blocks=note.split(/\n\s*\n/);
+  list.forEach((o,i)=>o.note=list.length===blocks.length?blocks[i].trim():note);
   try{
-    const saved=[];
-    for(let i=0;i<list.length;i++){const o=list[i];o.note=list.length===blocks.length?blocks[i].trim():note;saved.push(await put(o))}
-    fill(saved[0]);$('note').value='';
-    toast(saved.length>1?`${saved.length} case ခွဲပြီး သိမ်းပြီ — ပထမ case ကိုပြထားတယ်`:'ခွဲပြီး သိမ်းပြီ — Prompt ကူးလို့ရပြီ');
+    const r=await addMany(list);fill(r.first);$('note').value='';
+    toast(r.added&&r.dup?`အသစ် ${r.added} ခု သိမ်းပြီ၊ ရှိပြီးသား ${r.dup} ခု ထပ်မထည့်ပါ`:r.dup?'ဒီ case ရှိပြီးသား — အသစ်မထည့်ပါ (ကြုံဖူးအကြိမ် +1)':r.added>1?`${r.added} case ခွဲပြီး သိမ်းပြီ`:'ခွဲပြီး သိမ်းပြီ — Prompt ကူးလို့ရပြီ');
   }catch(x){toast('သိမ်းမရပါ: '+(x.message||x))}
 };
+
+/* ---- same model + same error + same fix → one case ---- */
+const norm=s=>String(s||'').toLowerCase().replace(/✅|done|error|ပေးလိုက်တော့|လိုက်တော့|ပေး|လေး|[\s.,;:()\-_/]+/g,'');
+const icSetOf=s=>new Set(icList(s).map(x=>x.toUpperCase().replace(/\s/g,'')));
+const sameSet=(a,b)=>a.size===b.size&&[...a].every(x=>b.has(x));
+const ACT=['change','reball','jumper','clean','replace','ပြန်ဆက်','ပြန်ထိုင်','ဖော်'];
+const acts=s=>new Set(ACT.filter(k=>String(s||'').toLowerCase().includes(k)));
+function sameCase(a,b){
+  if(mkey(a.model)!==mkey(b.model)||norm(a.error)!==norm(b.error))return false;
+  if(norm(a.fix)===norm(b.fix))return true;
+  const ia=icSetOf(a.ics),ib=icSetOf(b.ics);
+  return ia.size>0&&sameSet(ia,ib)&&sameSet(acts(a.fix),acts(b.fix));
+}
+async function addMany(list,bump=true){
+  const pool=[...cases];let added=0,dup=0,first=null;
+  for(const o of list){
+    const old=pool.find(c=>sameCase(c,o));
+    let saved;
+    if(old){
+      const ics=[...new Set([...icList(old.ics),...icList(o.ics)])].join(', ');
+      const diag=[old.diag,o.diag].filter(Boolean).filter((v,i,a)=>a.findIndex(x=>norm(x)===norm(v))===i).join('\n');
+      saved=await put({...old,ics,diag,done:old.done||o.done,ai:old.ai||o.ai,count:(old.count||1)+(bump?1:0)});dup++;
+      Object.assign(old,saved);
+    }else{saved=await put({...o,count:o.count||1});pool.push({...saved});added++}
+    first=first||saved;
+  }
+  return{added,dup,first};
+}
 $('f').addEventListener('submit',async e=>{
   e.preventDefault();const o=current();if(!o.model)return toast('Model ထည့်ပါ');
   try{fill(await put(o));toast('Save ပြီးပါပြီ')}catch(x){toast('သိမ်းမရပါ')}
@@ -321,6 +372,11 @@ $('saveSol').onclick=async()=>{
   const o=current();if(!o.id)return toast('Note အရင်ခွဲပါ (ဒါမှမဟုတ် case တစ်ခုရဲ့ "Solution ထည့်" ကိုနှိပ်ပါ)');
   o.ai=$('ai').value.trim();if(!o.ai)return toast('Gemini အဖြေကို paste လုပ်ပါ');
   try{await put(o);toast(`Solution ကို ${o.model} အောက်မှာ သိမ်းပြီး`)}catch(x){toast('သိမ်းမရပါ')}
+};
+$('bkCopy').onclick=()=>{if(!cases.length)return toast('Data မရှိသေးပါ');copy(JSON.stringify({app:'repair-formula-log',at:new Date().toISOString(),cases:cases.map(({id,...c})=>c)}))};
+$('bkImport').onclick=async()=>{
+  let list;try{const j=JSON.parse($('bkIn').value);list=(j.cases||j).filter(c=>c&&c.model)}catch(e){return toast('Backup စာသား မမှန်ပါ')}
+  try{const r=await addMany(list.map(c=>({...c,id:undefined})),false);$('bkIn').value='';toast(`အသစ် ${r.added} ခု ထည့်ပြီ၊ ရှိပြီးသား ${r.dup} ခု`)}catch(e){toast('ထည့်မရပါ')}
 };
 let viewCase=null;
 const closeView=()=>{$('viewer').classList.remove('on');document.body.classList.remove('lock')};
@@ -350,7 +406,7 @@ if(window.claude&&claude.use){
     if(!d){clearTimeout(timer);return useLocal('ဒီ browser ထဲမှာပဲ သိမ်းထားပါတယ်')}
     db=d;
     db.collection('cases').onSnapshot(snap=>{
-      clearTimeout(timer);mode='db';$('store').textContent='Online မှတ်တမ်း — ဘယ်ဖုန်းကဖွင့်ဖွင့် ပြန်ရှာလို့ရ';
+      if(mode!=='db')showAccount();clearTimeout(timer);mode='db';$('store').textContent='Online မှတ်တမ်း — ဘယ်ဖုန်းကဖွင့်ဖွင့် ပြန်ရှာလို့ရ';
       const docs=snap.docs||snap||[];
       cases=docs.map(x=>({id:x.id,...(typeof x.data==='function'?x.data():(x.data||{}))}));render();
     },()=>{clearTimeout(timer);useLocal('Online မချိတ်ရ — browser ထဲမှာ သိမ်းထားပါတယ်')});
