@@ -73,6 +73,11 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .thdel{position:absolute;top:-8px;right:-8px;min-height:0;width:28px;height:28px;padding:0;border-radius:50%;background:#0d0f11!important;border:1px solid #f2f4f5;font-size:13px;justify-content:center}
 .addimg{width:92px;height:92px;border:1px dashed #9aa5ae;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;font-weight:600;cursor:pointer;margin:0;color:#f2f4f5}
 .addimg:focus-within{outline:3px solid var(--red)}
+.addimg{position:relative;overflow:hidden}
+.fileov{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.pastezone{margin-top:10px;min-height:48px;border:1px dashed #9aa5ae;border-radius:10px;padding:12px;font-size:14px;color:#9aa5ae;overflow:hidden;max-height:48px}
+.pastezone:empty::before{content:"သို့မဟုတ် — Gemini ပုံကို Copy image လုပ်ပြီး ဒီမှာ ဖိထားပြီး Paste";}
+.pastezone:focus{outline:3px solid var(--red);color:#f2f4f5}
 .vbody img{max-width:100%;height:auto;display:block;margin:0 auto;border-radius:8px}
 .status{font-size:13px;color:var(--mute);margin:8px 0 0}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
@@ -328,7 +333,7 @@ async function addImages(c,files){
       else{const b=await shrink(f,900,.6);out.push({data:await blobToData(b)})}
     }catch(e){toast('ပုံတင်မရပါ: '+(e.message||e))}
   }
-  if(!out.length)return;
+  if(!out.length)return toast('ပုံ မတင်နိုင်ပါ');
   const cur=cases.find(x=>x.id===c.id)||c;
   await put({...cur,imgs:[...(cur.imgs||[]),...out]});toast(`ပုံ ${out.length} ပုံ ထည့်ပြီး`);if(mode!=='db')render();
 }
@@ -389,8 +394,9 @@ function card(c){
       :`<div class="row" style="margin-top:8px"><button class="sm" data-act="sol" data-id="${c.id}">Solution ပြင်</button></div>`}
       <p class="gl" style="margin-top:14px">ပုံ (Gemini ထုတ်ပေးတဲ့ပုံကို save ပြီး ဒီမှာထည့်)</p>
       <div class="thumbs">${(c.imgs||[]).map((im,i)=>`<div class="th"><button class="thimg" data-act="img" data-id="${c.id}" data-i="${i}" aria-label="ပုံ ${i+1} ကြည့်ရန်"><img src="${esc(imgSrc(im))}" alt="${esc(c.model)} ပုံ ${i+1}" loading="lazy"></button><button class="thdel" data-act="imgdel" data-id="${c.id}" data-i="${i}" aria-label="ပုံဖျက်">✕</button></div>`).join('')}
-        <label class="addimg">＋ ပုံထည့်<input type="file" accept="image/*" multiple data-imgfor="${c.id}" hidden></label>
+        <label class="addimg">＋ ပုံရွေး<input type="file" accept="image/*" multiple data-imgfor="${c.id}" class="fileov" aria-label="ပုံရွေး"></label>
       </div>
+      <div class="pastezone" contenteditable="true" data-pastefor="${c.id}" role="textbox" aria-label="ပုံ paste လုပ်ရန်" inputmode="none"></div>
     </div>
   </article>`;
 }
@@ -428,6 +434,15 @@ $('list').addEventListener('paste',e=>{const t=e.target.closest('textarea[data-s
     const b=document.querySelector(`[data-act="savesol"][data-id="${t.dataset.sol}"]`);if(b&&t.value.trim())b.click()},300)});
 $('list').addEventListener('change',e=>{const inp=e.target.closest('input[data-imgfor]');if(!inp||!inp.files.length)return;
   const c=cases.find(x=>x.id===inp.dataset.imgfor);if(c){toast('ပုံတင်နေသည်…');addImages(c,[...inp.files])}inp.value=''});
+$('list').addEventListener('paste',e=>{const z=e.target.closest('[data-pastefor]');if(!z)return;
+  const files=[...(e.clipboardData&&e.clipboardData.files||[])].filter(f=>/^image\//.test(f.type));
+  e.preventDefault();z.textContent='';
+  if(!files.length)return toast('Paste လုပ်တာ ပုံမဟုတ်ပါ — Gemini မှာ ပုံကို ဖိပြီး "Copy image" လုပ်ပါ');
+  const c=cases.find(x=>x.id===z.dataset.pastefor);if(c){toast('ပုံတင်နေသည်…');addImages(c,files)}});
+$('list').addEventListener('input',e=>{const z=e.target.closest('[data-pastefor]');if(z)setTimeout(()=>{z.textContent=''},50)});
+$('list').addEventListener('dragover',e=>{if(e.target.closest('.gem'))e.preventDefault()});
+$('list').addEventListener('drop',e=>{const g=e.target.closest('.gem');if(!g)return;e.preventDefault();const inp=g.querySelector('input[data-imgfor]');
+  const files=[...(e.dataTransfer&&e.dataTransfer.files||[])];const c=inp&&cases.find(x=>x.id===inp.dataset.imgfor);if(c&&files.length)addImages(c,files)});
 $('newBtn').onclick=()=>{fill({});$('note').value='';$('fieldsBox').open=false;$('note').focus()};
 
 $('splitBtn').onclick=async()=>{
