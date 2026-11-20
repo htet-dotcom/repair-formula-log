@@ -45,6 +45,9 @@ button.sm{min-height:36px;padding:0 12px;font-size:14px}
 .panel button{border-color:#f2f4f5;color:#f2f4f5}.panel button.pri{border-color:var(--red);color:#fff}
 .panel a.btn{border-color:#f2f4f5;color:#f2f4f5}
 .panel select{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;width:auto}
+.aibox{background:#1a1e22;color:#f2f4f5;border-color:#2e353b;min-height:140px}
+.case details{margin-top:8px;border-top:1px solid var(--line)}
+.case .aitext{white-space:pre-wrap;font-size:15px;max-height:320px;overflow:auto;background:var(--bg);border-radius:10px;padding:10px;margin:0 0 8px}
 .status{font-size:13px;color:var(--mute);margin-top:8px}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 .toast.on{opacity:1}
@@ -122,6 +125,12 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
         <a class="btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့်</a>
       </div>
       <p class="lab" style="margin-top:10px">Prompt ကူးပြီး Gemini မှာ paste လုပ်ပါ</p>
+      <label for="ai" style="color:#f2f4f5;margin-top:18px">Gemini အဖြေ — ရလာတဲ့အဖြေကို ဒီမှာ ပြန် paste လုပ်ပါ</label>
+      <textarea id="ai" class="aibox" placeholder="Gemini ရဲ့ အဖြေကို ကူးပြီး ဒီမှာ ထည့်ပါ…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button type="submit" form="f" class="pri">အဖြေနဲ့တကွ Save</button>
+        <button type="button" class="sm" id="pasteAi">Paste</button>
+      </div>
     </section>
   </div>
 </main>
@@ -141,7 +150,7 @@ details summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const F=['model','error','diag','ics','fix'];
+const F=['model','error','diag','ics','fix','ai'];
 const ERR=['Baseband Unknown','No power','No Power','Charging error','Not charging','Radio Off','No service','No signal','Hang logo','Restart','Dead','No display','No touch','Network error','Wifi error','Bluetooth error','No sound','Mic error','Camera error','Short'];
 let cases=[],db=null,mode='wait',filter='',chip='';
 
@@ -221,7 +230,7 @@ function render(){
   $('errList').innerHTML=errs.map(e=>`<option value="${esc(e)}">`).join('');
   $('chips').innerHTML=['',...errs].map(e=>`<button class="chip ${chip===e?'on':''}" data-chip="${esc(e)}">${e?esc(e):'အားလုံး'}</button>`).join('');
   const q=filter.toLowerCase();
-  const show=cases.filter(c=>(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.diag,c.ics,c.fix].join(' ').toLowerCase().includes(q)));
+  const show=cases.filter(c=>(!chip||(c.error||'').toLowerCase().includes(chip.toLowerCase()))&&(!q||[c.model,c.error,c.diag,c.ics,c.fix,c.ai].join(' ').toLowerCase().includes(q)));
   $('count').textContent=`(${show.length}/${cases.length})`;
   $('list').innerHTML=show.length?show.map(c=>`<article class="card case">
     <h3>${esc(c.model)} <span class="${c.done?'done':''}">${c.done?'✅':'⏳'}</span></h3>
@@ -232,9 +241,12 @@ function render(){
     <div class="row" style="margin-top:10px">
       <button class="sm" data-act="prompt" data-id="${c.id}">Prompt ကူး</button>
       <button class="sm" data-act="formula" data-id="${c.id}">Formula ကူး</button>
+      <button class="sm" data-act="ai" data-id="${c.id}">${c.ai?'အဖြေပြင်':'အဖြေထည့်'}</button>
       <button class="sm" data-act="edit" data-id="${c.id}">ပြင်</button>
       <button class="sm" data-act="del" data-id="${c.id}">ဖျက်</button>
-    </div></article>`).join(''):`<div class="empty">${cases.length?'ရှာတာနဲ့ ကိုက်တဲ့ case မရှိပါ':'Case မရှိသေးပါ — အပေါ်မှာ ထည့်ပါ'}</div>`;
+    </div>
+    ${c.ai?`<details><summary>Gemini အဖြေ ကြည့်ရန်</summary><div class="aitext">${esc(c.ai)}</div><button class="sm" data-act="copyai" data-id="${c.id}">အဖြေ ကူး</button></details>`:''}
+    </article>`).join(''):`<div class="empty">${cases.length?'ရှာတာနဲ့ ကိုက်တဲ့ case မရှိပါ':'Case မရှိသေးပါ — အပေါ်မှာ ထည့်ပါ'}</div>`;
 }
 
 /* ---- events ---- */
@@ -244,6 +256,7 @@ const ready=()=>{const o=read();if(o.model&&o.error)return o;toast('Model နဲ
 $('copyF').onclick=()=>{const o=ready();if(o)copy(formulaText(o))};
 $('copyP').onclick=()=>{const o=ready();if(o)copy(promptText(o))};
 $('clearBtn').onclick=()=>fill({});
+$('pasteAi').onclick=async()=>{try{const t=await navigator.clipboard.readText();if(t){$('ai').value=t;toast('Paste ပြီး — Save နှိပ်ပါ')}}catch(e){$('ai').focus();toast('Box ကို ဖိထားပြီး Paste ကိုရွေးပါ')}};
 $('f').addEventListener('submit',async e=>{
   e.preventDefault();const o=read();if(!o.model||!o.error)return toast('Model နဲ့ Error ထည့်ပါ');
   const id=$('eid').value;if(id){const old=cases.find(c=>c.id===id);o.id=id;o.created=old&&old.created}
@@ -262,6 +275,8 @@ $('list').addEventListener('click',async e=>{
   const a=b.dataset.act;
   if(a==='prompt'){fill(c);copy(promptText(c))}
   else if(a==='formula')copy(formulaText(c));
+  else if(a==='copyai')copy(c.ai||'');
+  else if(a==='ai'){fill(c);$('ai').scrollIntoView({behavior:'smooth',block:'center'});$('ai').focus({preventScroll:true})}
   else if(a==='edit'){fill(c);window.scrollTo({top:0,behavior:'smooth'})}
   else if(a==='del'){
     if(b.dataset.sure){try{await del(c.id);toast('ဖျက်ပြီး')}catch(x){toast('ဖျက်မရပါ')}}
