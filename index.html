@@ -205,7 +205,7 @@ body.lock{overflow:hidden}
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
   <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
   <div class="syncbar">
-    <p class="status" id="appVer" style="margin:4px 0 0">Version 2026-11-22 · 10:00</p>
+    <p class="status" id="appVer" style="margin:4px 0 0">Version 2026-11-22 · 15:30</p>
   <p class="sync" id="sync">Sync စစ်နေသည်…</p>
     <div class="row" id="gdBox" hidden><button class="sm pri" id="gdBtn">Google Drive နဲ့ Sync ချိတ်</button><button class="sm" id="gdNow" hidden>ယခု Sync</button></div>
   </div>
@@ -589,15 +589,35 @@ async function gdSync(){
   }
   gd.busy=false;if(gd.again){gd.again=false;gdSync()}
 }
-function gdArm(){if(!gd.armed&&ls('gdOn')){gd.armed=true;document.addEventListener('click',gdAuto,true)}}
+/* installed app (Home screen): Google's popup sign-in fails there, so go to Google's page and come back */
+const isApp=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}};
+const GD_SCOPE='https://www.googleapis.com/auth/drive.file';
+const gdRedirectUri=()=>location.origin+location.pathname.replace(/index\.html$/,'');
+function gdRedirect(){
+  const id=gdId();if(!id){$('gdCfg').open=true;return toast('Google Client ID အရင်ထည့်ပါ')}
+  const st=Math.random().toString(36).slice(2);ls('gdState',st);
+  const q=new URLSearchParams({client_id:id,redirect_uri:gdRedirectUri(),response_type:'token',scope:GD_SCOPE,include_granted_scopes:'true',state:st});
+  if(!ls('gdOn'))q.set('prompt','consent');
+  gdStat('Google login စာမျက်နှာကို သွားနေသည်…');location.href='https://accounts.google.com/o/oauth2/v2/auth?'+q;
+}
+function gdFromHash(){   /* back from Google's page: #access_token=…&state=… */
+  if(!/access_token=|error=/.test(location.hash))return false;
+  const h=new URLSearchParams(location.hash.slice(1));history.replaceState(null,'',location.pathname+location.search);
+  const ok=h.get('state')&&h.get('state')===ls('gdState');ls('gdState',null);
+  if(h.get('error')||!h.get('access_token')||!ok){gdStat('Google ချိတ်မရပါ: '+(h.get('error')||'state'));return false}
+  gd.token=h.get('access_token');gd.exp=Date.now()+((+h.get('expires_in')||3600)-60)*1000;
+  ls('gdOn','1');ls('gdTok',JSON.stringify({t:gd.token,exp:gd.exp}));return true;
+}
+function gdArm(){if(isApp())return;if(!gd.armed&&ls('gdOn')){gd.armed=true;document.addEventListener('click',gdAuto,true)}}
 function gdAuto(e){   /* first tap after reload / expiry → reconnect quietly (a tap is needed for Google's popup) */
   if(gd.token||!ls('gdOn')){document.removeEventListener('click',gdAuto,true);gd.armed=false;return}
   if(e.target.closest&&e.target.closest('#gdBtn'))return;
   if(!(window.google&&google.accounts&&google.accounts.oauth2))return;
   document.removeEventListener('click',gdAuto,true);gd.armed=false;gdStat('Google Drive နဲ့ ပြန်ချိတ်နေသည်…');gdConnect();
 }
-function gdOff(msg){gd.token=null;ls('gdTok',null);gdArm();$('gdBtn').hidden=false;$('gdBtn').textContent='Sync ပြန်ချိတ်';$('gdNow').hidden=true;setSync('Google Drive Sync ပြတ်နေတယ်','off');gdStat(msg)}
+function gdOff(msg){if(isApp())msg=msg.replace('Screen ကို တစ်ချက်နှိပ်ရင် ပြန်ချိတ်မယ်','"Sync ပြန်ချိတ်" နှိပ်ပါ');gd.token=null;ls('gdTok',null);gdArm();$('gdBtn').hidden=false;$('gdBtn').textContent='Sync ပြန်ချိတ်';$('gdNow').hidden=true;setSync('Google Drive Sync ပြတ်နေတယ်','off');gdStat(msg)}
 function gdConnect(){
+  if(isApp())return gdRedirect();
   const id=gdId();if(!id){$('gdCfg').open=true;return toast('Google Client ID အရင်ထည့်ပါ')}
   if(!(window.google&&google.accounts&&google.accounts.oauth2))return toast('Google ချိတ်ဖို့ ပြင်ဆင်နေသည် — ခဏနေ ထပ်နှိပ်ပါ');
   if(!gd.client)gd.client=google.accounts.oauth2.initTokenClient({client_id:id,scope:'https://www.googleapis.com/auth/drive.file',
@@ -610,11 +630,12 @@ function gdConnect(){
 function gdSetup(){
   if(window.claude&&claude.use)return;   /* Claude artifact ထဲမှာ Claude sync ကိုပဲ သုံး */
   $('gdBox').hidden=false;$('gdCfg').hidden=!!GD_CLIENT_ID;$('gdIdIn').value=ls('gdClientId')||'';
+  gdFromHash();
   let tk=null;try{tk=JSON.parse(ls('gdTok')||'null')}catch(e){}
   if(ls('gdOn')&&tk&&tk.t&&tk.exp>Date.now()+30000){   /* still valid from last time → no need to tap */
     gd.token=tk.t;gd.exp=tk.exp;$('gdBtn').hidden=true;$('gdNow').hidden=false;setSync('Google Drive Sync ဖွင့်ထားတယ်','ok');setTimeout(gdSync,300);
   }else if(ls('gdOn')){
-    $('gdBtn').textContent='Google Drive Sync ပြန်ချိတ်';gdStat('Screen ကို တစ်ချက်နှိပ်လိုက်တာနဲ့ Google Drive ကို အလိုလို ပြန်ချိတ်မယ်');gdArm();
+    $('gdBtn').textContent='Google Drive Sync ပြန်ချိတ်';gdStat(isApp()?'"Google Drive Sync ပြန်ချိတ်" နှိပ်ပါ':'Screen ကို တစ်ချက်နှိပ်လိုက်တာနဲ့ Google Drive ကို အလိုလို ပြန်ချိတ်မယ်');gdArm();
   }else gdStat(gdId()?'တစ်ခါနှိပ်ပြီး Google အကောင့်နဲ့ ချိတ်ပါ — နောက်ပိုင်း ပြင်တိုင်း Drive မှာ အလိုလို သိမ်းမယ်':'Google Client ID မထည့်ရသေးပါ');
   const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;document.head.appendChild(s);
   $('gdBtn').onclick=gdConnect;$('gdNow').onclick=gdSync;
