@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="panel">#0d0f11</color>
+    <color name="bg">#d5dbe0</color>
+    <string name="asset_statements" translatable="false">[{\"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": {\"namespace\": \"web\", \"site\": \"https://htet-dotcom.github.io\"}}]</string>
+</resources>

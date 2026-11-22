@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "io.github.htet_dotcom.repairlog",
+    "sha256_cert_fingerprints": ["18:FD:36:83:5A:88:DB:68:D6:0F:8A:C0:24:0E:60:FA:DB:C7:CC:23:24:21:09:38:88:BD:21:AC:9A:4C:56:07"]
+  }
+}]

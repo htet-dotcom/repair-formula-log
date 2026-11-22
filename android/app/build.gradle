@@ -1,0 +1,36 @@
+plugins { id 'com.android.application' }
+
+def ksFile = file(System.getenv('RL_KEYSTORE') ?: '../repairlog.keystore')
+
+android {
+    namespace 'io.github.htet_dotcom.repairlog'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'io.github.htet_dotcom.repairlog'
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+        manifestPlaceholders = [
+            hostName: 'htet-dotcom.github.io',
+            defaultUrl: 'https://htet-dotcom.github.io/repair-formula-log/',
+            launcherName: 'Repair Log'
+        ]
+    }
+    signingConfigs {
+        release {
+            storeFile ksFile
+            storePassword System.getenv('RL_KS_PASS') ?: 'repairlog'
+            keyAlias 'repairlog'
+            keyPassword System.getenv('RL_KS_PASS') ?: 'repairlog'
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.release }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
