@@ -81,6 +81,8 @@ details>summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;alig
 .kbadge{display:inline-block;font-size:12px;font-weight:700;background:var(--ink);color:var(--bg);border-radius:6px;padding:2px 8px;margin-bottom:6px}
 .ltitle{font-weight:700;margin:0;font-size:15px}
 .case.lesson{border-left:4px solid var(--ink)}
+.case.theory{border-left:4px solid var(--ok)}
+.kbadge.th{background:var(--ok);color:var(--card)}
 .thumbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .th{display:grid;gap:4px}
 .gem .thimg{padding:0;border:1px solid #2e353b;border-radius:10px;overflow:hidden;width:100%;height:auto;aspect-ratio:1;min-height:0;background:#1a1e22}
@@ -203,7 +205,7 @@ body.lock{overflow:hidden}
   <h1>ဖုန်း Repair Formula မှတ်တမ်း</h1>
   <p class="sub">Note ပဲပေး → အလိုလိုခွဲ → Gemini prompt ကူး → Solution ပြန်ထည့် → Model အလိုက် ပြန်ရှာ</p>
   <div class="syncbar">
-    <p class="status" id="appVer" style="margin:4px 0 0">Version 2026-11-20 · 22:40</p>
+    <p class="status" id="appVer" style="margin:4px 0 0">Version 2026-11-22 · 10:00</p>
   <p class="sync" id="sync">Sync စစ်နေသည်…</p>
     <div class="row" id="gdBox" hidden><button class="sm pri" id="gdBtn">Google Drive နဲ့ Sync ချိတ်</button><button class="sm" id="gdNow" hidden>ယခု Sync</button></div>
   </div>
@@ -233,7 +235,7 @@ body.lock{overflow:hidden}
         </div>
         <p class="status" style="margin-top:8px">Gemini ပြန်ပေးတဲ့ အဖြေကို ကူးပြီး Note box ထဲ paste လုပ်ရင် case / Shortcut အဖြစ် အလိုလို ခွဲသိမ်းမယ်</p>
       </div>
-      <p class="status" id="noteHelp">YouTube link ထည့်ရင် Gemini prompt ထုတ်ပေးမယ်။ Paste လုပ်လိုက်တာနဲ့ အလိုလို ခွဲပြီး သိမ်းမယ်။ Zawgyi စာကို Unicode အလိုလိုပြောင်းမယ်။ Case အများကြီးဆို blank line တစ်ကြောင်းခြားပြီး တခါတည်းထည့်လို့ရ။ ဖုန်း Model နဲ့ စစ်ဆေးချက် မပါတဲ့ case ကို မသိမ်းပါ</p>
+      <p class="status" id="noteHelp">YouTube link ထည့်ရင် Gemini prompt ထုတ်ပေးမယ်။ Paste လုပ်လိုက်တာနဲ့ အလိုလို ခွဲပြီး သိမ်းမယ်။ Zawgyi စာကို Unicode အလိုလိုပြောင်းမယ်။ Case အများကြီးဆို blank line တစ်ကြောင်းခြားပြီး တခါတည်းထည့်လို့ရ။ ဖုန်း Model နဲ့ စစ်ဆေးချက် မပါတဲ့ case ကို မသိမ်းပါ။ "ဖုန်း Circuit လမ်းကြောင်းပိုင်း - ၂၆" လို အခြေခံ သင်ခန်းစာ post တွေကိုလည်း တစ်ပုဒ်လုံး paste လုပ်ရင် သင်ခန်းစာအဖြစ် အပိုင်းအလိုက် သိမ်းမယ်</p>
 
       <details id="fieldsBox" style="margin-top:10px">
         <summary>ခွဲထားတာ စစ်ရန် / ပြင်ရန်</summary>
@@ -269,7 +271,7 @@ body.lock{overflow:hidden}
     <input id="q" type="search" placeholder="ရှာရန်: model, error, IC (ဥပမာ 12R, PM7250B)">
   </div>
   <div class="filters">
-    <label class="fsel fwide"><span>ဖုန်း Model</span><select id="fModel"></select></label>
+    <label class="fsel fwide"><span>ဖုန်း Model / သင်ခန်းစာ</span><select id="fModel"></select></label>
     <label class="fsel"><span>Error</span><select id="fErr"></select></label>
     <label class="fsel"><span>အမျိုးအစား</span><select id="fKind"></select></label>
   </div>
@@ -319,6 +321,11 @@ const copy=async t=>{try{await navigator.clipboard.writeText(t);toast('ကူး
 const icList=s=>String(s||'').split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
 const normN=t=>String(t||'').replace(/[\s✅]+/g,'').toLowerCase();
 const mkey=m=>String(m||'').toLowerCase().replace(/[\s()\-_]+/g,'');
+const mmNum=t=>String(t||'').replace(/[\u1040-\u1049]/g,d=>d.charCodeAt(0)-0x1040);
+const BRAND=/(Redmi|Xiaomi|Poco|Mi |Samsung|Galaxy|iPhone|Oppo|Vivo|Realme|Infinix|Tecno|Huawei|Honor|Nokia|Itel)\s*[\w()+ ]{1,20}/i;
+const SERIES=/^(.{3,60}?)\s*[-–—:]\s*([0-9\u1040-\u1049]{1,4})\s*$/;
+const THEORY='အခြေခံ သင်ခန်းစာ';
+const isLong=t=>looksTheory(t)||looksLesson(t);
 
 function read(){const o={};F.forEach(k=>o[k]=$(k).value.trim());o.done=$('done').checked;return o}
 function current(){const id=$('eid').value;const c=cases.find(x=>x.id===id)||{};return{...c,...read(),id:id||undefined}}
@@ -336,6 +343,7 @@ function formulaHTML(o){
 function promptText(o){
   if(!o.model||!o.error)return 'Note ခွဲပြီးရင် prompt ဒီမှာ ပေါ်မယ်';
   if(o.kind==='lesson')return lessonPrompt(o);
+  if(o.kind==='theory')return theoryPrompt(o);
   const my=$('lang').value==='my', ics=icList(o.ics).join(', ')||'unknown';
   const L=['You are an expert mobile phone board-level (motherboard) repair technician.','',
   `Phone model: ${o.model}`,`Fault / symptom: ${o.error}`];
@@ -357,11 +365,31 @@ function promptText(o){
 }
 function imagePrompt(o){
   const ics=icList(o.ics).join(', ')||'the ICs involved';
+  if(o.kind==='theory')return ['Below is a mobile phone repair basics lesson'+(o.title?` ("${o.title}")`:'')+`: ${o.error}. It may be written in Burmese.`,'',
+    'Step 1. Rewrite it in clear, short English (about 150–250 words) as key points, with any example readings as a small table.','',
+    `Step 2. Then generate ONE image: a clean technical cheat-sheet / infographic titled "${o.error}". Show the key idea as a simple diagram (e.g. multimeter, probes, range selector, display readings) with the main rules as short numbered points. Use English labels only, large readable text, white background, landscape 16:9. Do not invent values that are not in the lesson.`,'',
+    '--- LESSON ---',o.ai||o.note||[o.diag,o.fix].filter(Boolean).join('\n')].join('\n');
   const body=o.ai?o.ai:[`Phone model: ${o.model}`,`Fault: ${o.error}`,o.diag&&`Findings / points to check:\n${o.diag}`,`ICs: ${ics}`,o.fix&&`${o.kind==='lesson'?'Key tips':'Fix'}:\n${o.fix}`].filter(Boolean).join('\n');
   return [`Below is a mobile phone motherboard repair ${o.kind==='lesson'?'lesson':'solution'} for ${o.model} — ${o.error}. It may be written in Burmese.`,'',
   'Step 1. Rewrite it in clear, short English (about 150–250 words) with these headings: Phone model, Fault, Circuit block, Key ICs, Test points (diode mode and voltage values), Fix steps, Tips.','',
   `Step 2. Then generate ONE image: a clean technical repair infographic / cheat-sheet titled "${o.model} — ${o.error}". Show the circuit block as a simple diagram, the IC(s) ${ics} as labelled boxes, the key test points with their normal diode and voltage values in a small table, and the fix as numbered steps. Use English labels only, large readable text, white background, landscape 16:9. Do not invent values that are not in the solution.`,'',
   '--- SOLUTION ---',body].join('\n');
+}
+function theoryPrompt(o){
+  const my=$('lang').value==='my';
+  return ['You are an expert mobile phone board-level (motherboard) repair instructor teaching beginners.','',
+  'Here is a basics lesson I am studying'+(o.title?` ("${o.title}")`:'')+(o.source?` from ${o.source}`:'')+'. Check it carefully, correct anything wrong or unclear, and expand it.','',
+  `Topic: ${o.error}`,'','--- LESSON ---',o.note||[o.diag,o.fix].filter(Boolean).join('\n'),'--- END ---','',
+  'Please:',
+  '1. Summarise the lesson in short, numbered key points.',
+  '2. List any mistakes or confusing statements (wrong units, wrong decimal reading, wrong polarity, etc.) and give the correct explanation.',
+  '3. Explain the theory simply, with a practical phone-repair example (which rail / point on a phone board you would measure this way, and the normal value).',
+  '4. Give a step-by-step practice exercise I can do on the bench (multimeter / DC power supply), with what reading to expect.',
+  '5. A small table of example readings (Meter display | Range / scale | How to read it | Meaning) where relevant.',
+  '6. Common beginner mistakes and safety tips for this topic.',
+  '7. 5 short quiz questions with answers to test myself.','',
+  'If something depends on the specific meter or phone, say so instead of guessing.','',
+  my?'Answer in Burmese (မြန်မာဘာသာ), keep technical terms, units and symbols in English.':'Answer in clear English.'].join('\n');
 }
 function lessonPrompt(o){
   const my=$('lang').value==='my',ics=icList(o.ics).join(', ')||'unknown';
@@ -383,10 +411,29 @@ function draw(){$('formula').innerHTML=formulaHTML(read())}
 
 /* ---- splitting notes: Claude first, simple rules as fallback ---- */
 const looksLesson=t=>/#|ဘာတွေဘယ်လိုစစ်|အဖြေရှာနည်း|လေ့လာ|မှတ်သား|စစ်ရမယ့်/.test(t)&&t.split('\n').length>5;
+/* general lesson / theory article (no phone model), e.g. "ဖုန်း Circuit လမ်းကြောင်းပိုင်း - ၂၆" */
+function looksTheory(t){
+  const L=String(t||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  if(L.length<3||/^#/.test(L[0])||L.slice(0,3).some(l=>BRAND.test(l)))return false;
+  if(SERIES.test(L[0])&&t.length>200)return true;
+  return t.length>600&&t.length/L.length>80;
+}
+const PROMO=/(နောက်\s*Post|ဆက်လက်ဖော်ပြ|ဆက်လက်ဖတ်ရှု|Yes\s*လို့\s*မန့်|ဖုန်းနံပါတ်|ဆက်သွယ်ရန်)/i;
+function theoryParse(block){
+  const L=block.split('\n').map(l=>l.trim()).filter(Boolean);
+  const m=L[0].match(SERIES);
+  const series=m?m[1].trim():THEORY,part=m?+mmNum(m[2]):0;
+  const body=(m?L.slice(1):L).filter(l=>!(PROMO.test(l)&&l.length<160));
+  const tl=(body[0]||'').length<=120?body[0]:'';
+  const topic=(tl||'').replace(/(ကို)?\s*(ဆက်လက်)?\s*(ပြောပြ|ရှင်းပြ|ဖော်ပြ|သင်ပြ)(ပေး)?(ပါ)?(မယ်|မည်)?[။.\s]*$/,'').trim()||(m?`${series} - ${part}`:'သင်ခန်းစာ');
+  const ics=[...new Set(block.match(/\b[A-Z]{2,}[0-9]{3,}[A-Z0-9-]*\b/g)||[])].join(', ');
+  return{kind:'theory',model:series,series,part,error:topic.slice(0,90),title:m?L[0]:'',diag:(tl?body.slice(1):body).join('\n'),ics,fix:'',source:'',applies:'',done:true};
+}
 function ruleParse(block){
+  if(looksTheory(block))return theoryParse(block);
   if(looksLesson(block)){
     const L=block.split('\n').map(l=>l.trim()).filter(Boolean);
-    const BR=/(Redmi|Xiaomi|Poco|Mi |Samsung|Galaxy|iPhone|Oppo|Vivo|Realme|Infinix|Tecno|Huawei|Honor|Nokia|Itel)\s*[\w()+ ]{1,20}/i;
+    const BR=BRAND;
     const ml=L.find(l=>BR.test(l));const model=ml?(ml.match(BR)[0].replace(/\s+(Display|Charging|No|Baseband|Error|စစ်).*$/i,'').trim()):'';
     const em=block.match(/(Display|Charging|Baseband|Network|Power|Backlight|Touch|Camera|Audio|Wifi|Speaker|Mic)\s*(Error|Problem|Unknown)?/i);
     const ics=[...new Set(block.match(/\b[A-Z]{2,}[0-9]{3,}[A-Z0-9-]*\b/g)||[])].join(', ');
@@ -410,28 +457,34 @@ async function aiParse(note){
   const instr=`You split a mobile phone motherboard repair technician's notes (Burmese mixed with English) into structured entries.
 There are two kinds:
 - "case": a repair job that was done (model + fault + what was found + what fixed it). Notes may hold several cases, often separated by blank lines, each starting with a phone model.
-- "lesson": a learning shortcut / how-to-check guide (often with # hashtags, a teacher's name, "ဘာတွေဘယ်လိုစစ်မလဲ", "အဖြေရှာနည်း", lists of lines to check). One lesson is one entry.
-Ignore shop advertising, addresses and phone numbers.
+- "lesson": a learning shortcut / how-to-check guide for a phone model (often with # hashtags, a teacher's name, "ဘာတွေဘယ်လိုစစ်မလဲ", "အဖြေရှာနည်း", lists of lines to check). One lesson is one entry.
+- "theory": a general knowledge / basics lesson that is not about one phone model (e.g. "ဖုန်း Circuit လမ်းကြောင်းပိုင်း - ၂၆" explaining how to measure DC voltage with a multimeter). A whole article, even with many paragraphs, is ONE entry.
+Ignore shop advertising, addresses, phone numbers and "comment Yes / next post" lines.
 For each entry return:
 - kind: "case" or "lesson"
-- model: phone model only, cleaned (e.g. "Redmi 8", "Redmi 10 (2022)")
-- error: the fault / topic in short English (e.g. "Display Error", "No power", "Baseband Unknown")
-- title: for a lesson, its heading line(s) as written (e.g. "#ဘာတွေဘယ်လိုစစ်မလဲ-15"); "" for a case
-- diag: case → what was measured or found; lesson → the lines / points / voltages to check. Keep the technician's Burmese wording, one item per line
+- model: phone model only, cleaned (e.g. "Redmi 8", "Redmi 10 (2022)"); theory → "" 
+- series: theory → the series name from the heading without the part number (e.g. "ဖုန်း Circuit လမ်းကြောင်းပိုင်း"), else ""
+- part: theory → the part number from the heading as a plain number (e.g. "၂၆" → 26), else 0
+- error: the fault / topic in short English (e.g. "Display Error", "No power", "Baseband Unknown"); theory → short topic, Burmese allowed (e.g. "မီတာဖြင့် DC Voltage တိုင်းနည်း")
+- title: for a lesson or theory, its heading line(s) as written (e.g. "#ဘာတွေဘယ်လိုစစ်မလဲ-15", "ဖုန်း Circuit လမ်းကြောင်းပိုင်း - ၂၆"); "" for a case
+- diag: case → what was measured or found; lesson → the lines / points / voltages to check; theory → the key points of the lesson as short lines (keep all values and examples). Keep the technician's Burmese wording, one item per line
 - ics: comma-separated IC / part names involved (e.g. "PMI632-902-00, Backlight Driver IC")
-- fix: case → what was done to repair it; lesson → the key tips and causes to remember (e.g. a resistor that causes black screen). Keep Burmese wording, one item per line
+- fix: case → what was done to repair it; lesson → the key tips and causes to remember (e.g. a resistor that causes black screen); theory → practical tips / rules to remember. Keep Burmese wording, one item per line
 - source: teacher, video link (e.g. a "Source:" YouTube URL) or source named, else ""
 - applies: other models or platforms the lesson says it also applies to, else ""
-- done: case → true if fixed (Done, ✅, OK), else false; lesson → true
+- done: case → true if fixed (Done, ✅, OK), else false; lesson / theory → true
 diag must not just repeat an IC name. Do not invent anything not in the notes; leave a field "" if missing.
-Reply with JSON only: {"cases":[{"kind":"case","model":"","error":"","title":"","diag":"","ics":"","fix":"","source":"","applies":"","done":true}]}
+Reply with JSON only: {"cases":[{"kind":"case","model":"","series":"","part":0,"error":"","title":"","diag":"","ics":"","fix":"","source":"","applies":"","done":true}]}
 
 NOTES:
 ${note}`;
   const r=await sample.json(instr,{modelTier:'quick'});
   const list=Array.isArray(r)?r:(r&&r.cases)||[];
   const S=v=>String(v??'').trim();
-  return list.filter(c=>c&&c.model).map(c=>({kind:c.kind==='lesson'?'lesson':'case',model:S(c.model),error:S(c.error)||'Unknown',title:S(c.title),diag:S(c.diag),ics:S(c.ics),fix:S(c.fix),source:S(c.source),applies:S(c.applies),done:c.done!==false}));
+  return list.filter(c=>c&&(c.model||c.kind==='theory')).map(c=>{
+    const k=['lesson','theory'].includes(c.kind)?c.kind:'case',o={kind:k,model:S(c.model),error:S(c.error)||'Unknown',title:S(c.title),diag:S(c.diag),ics:S(c.ics),fix:S(c.fix),source:S(c.source),applies:S(c.applies),done:c.done!==false};
+    if(k==='theory'){const m=o.title.match(SERIES);o.series=S(c.series)||(m?m[1].trim():THEORY);o.part=+mmNum(c.part)||(m?+mmNum(m[2]):0)||0;o.model=o.series;o.done=true}
+    return o});
 }
 
 /* ---- images ---- */
@@ -464,7 +517,7 @@ const saveLocal=()=>{writeLocal();gdSchedule()};
 async function put(o){
   o.id=o.id||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
   o.updated=Date.now();o.created=o.created||o.updated;
-  const data={};['kind','title','source','applies','imgs','model','error','diag','ics','fix','done','ai','note','count','created','updated'].forEach(k=>{if(o[k]!==undefined)data[k]=o[k]});
+  const data={};['kind','title','series','part','source','applies','imgs','model','error','diag','ics','fix','done','ai','note','count','created','updated'].forEach(k=>{if(o[k]!==undefined)data[k]=o[k]});
   if(mode==='db')await db.collection('cases').doc(o.id).set(data);
   else{const i=cases.findIndex(c=>c.id===o.id);i<0?cases.unshift({...data,id:o.id}):cases[i]={...data,id:o.id};saveLocal();render()}
   return o;
@@ -636,7 +689,7 @@ function md(src){
 
 /* ---- list grouped by model ---- */
 function card(c){
-  const L=c.kind==='lesson',imgs=c.imgs||[];
+  const L=c.kind==='lesson'||c.kind==='theory',T=c.kind==='theory',imgs=c.imgs||[];
   const fld=(k,v,one)=>v?`<div><span class="k">${k}</span><div class="v${one?' one':''}">${v}</div></div>`:'';
   const br=t=>esc(t).replace(/\n/g,'<br>');
   let cut=false;const short=t=>{const ls_=String(t||'').split('\n').map(x=>x.trim()).filter(Boolean);if(ls_.length>1||(ls_[0]||'').length>45)cut=true;return esc(ls_[0]||'')};
@@ -645,10 +698,10 @@ function card(c){
   if(ics.length>3||(L&&c.title)||c.applies||c.source)cut=true;
   const open=openCards.has(c.id);
   const peek=String(c.fix||c.diag||'').split('\n').find(Boolean)||'';
-  return `<article class="card case${L?' lesson':''}${open?' open':''}">
+  return `<article class="card case${T?' theory':L?' lesson':''}${open?' open':''}">
     <button class="ctog" data-act="toggle" data-id="${c.id}" aria-expanded="${open}">
       <span class="ttl">
-        ${L?'<span class="kbadge">Shortcut သင်ခန်းစာ</span>':''}
+        ${T?`<span class="kbadge th">${THEORY}${c.part?` · အပိုင်း ${c.part}`:''}</span>`:L?'<span class="kbadge">Shortcut သင်ခန်းစာ</span>':''}
         <span class="err">${esc(c.error)}</span>
         <span class="meta"><span class="pill${c.done?' ok':''}">${c.done?'✅ Done':'⏳ မပြီးသေး'}</span>${(c.count||1)>1?`<span class="pill">ကြုံဖူး ×${c.count}</span>`:''}${c.ai?'<span class="pill ok">Solution ရှိ</span>':''}${imgs.length?`<span class="pill">ပုံ ${imgs.length}</span>`:''}</span>
         ${!open&&peek?`<span class="peek">${esc(peek)}</span>`:''}
@@ -657,20 +710,20 @@ function card(c){
     </button>
     ${open?`<div class="cbody">
     <div class="fields">
-      ${fld(L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',sd,1)}
+      ${fld(T?'အဓိက အချက်':L?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',sd,1)}
       ${fld('IC',ics.length&&ics.slice(0,3).map(i=>`<span class="tag">${esc(i)}</span>`).join('')+(ics.length>3?`<span class="tag more">+${ics.length-3}</span>`:''))}
-      ${fld(L?'အထူးသတိထားရန်':'ပြင်နည်း',sf,1)}
+      ${fld(T?'မှတ်ရန်':L?'အထူးသတိထားရန်':'ပြင်နည်း',sf,1)}
 
     </div>
     ${c.note||cut?`<button class="fullbtn" data-act="note" data-id="${c.id}"><span>မူရင်းစာ အပြည့်ကြည့်</span><span>›</span></button>`:''}
     <div class="gem">
-      <p class="gl">GEMINI — ${esc(c.model)}</p>
+      <p class="gl">GEMINI — ${esc(T?(c.title||c.error):c.model)}</p>
       <div class="g2">
         <button class="pri" data-act="prompt" data-id="${c.id}">Prompt ကူး</button>
         <button data-act="imgprompt" data-id="${c.id}">ပုံ Prompt ကူး</button>
       </div>
       <a class="btn" href="https://gemini.google.com/app" target="_blank" rel="noopener">Gemini ဖွင့် ↗</a>
-      ${c.ai?`<button class="solbtn" data-act="view" data-id="${c.id}"><span>ဖုန်း Solution ကြည့်ရန်</span><span>›</span></button>`:''}
+      ${c.ai?`<button class="solbtn" data-act="view" data-id="${c.id}"><span>${T?'Gemini ရှင်းလင်းချက် ကြည့်ရန်':'ဖုန်း Solution ကြည့်ရန်'}</span><span>›</span></button>`:''}
       ${(!c.ai||openSol.has(c.id))?`<textarea data-sol="${c.id}" placeholder="Gemini အဖြေကို ဒီမှာ paste လုပ်ပါ">${esc(c.ai||'')}</textarea>
       <button class="pri" data-act="savesol" data-id="${c.id}">Solution သိမ်းမယ်</button>`
       :`<button data-act="sol" data-id="${c.id}">Solution ပြင်</button>`}
@@ -696,8 +749,8 @@ function render(){
   const drafts={};let focusId=null;
   document.querySelectorAll('textarea[data-sol]').forEach(t=>{drafts[t.dataset.sol]=t.value;if(document.activeElement===t)focusId=t.dataset.sol});
   cases.sort((a,b)=>(b.created||0)-(a.created||0));
-  const errs=[...new Set(cases.map(c=>(c.error||'').replace(/error/i,'').trim()).filter(Boolean))];
-  const kinds=[['','အားလုံး'],['case','Repair case'],['lesson','Shortcut သင်ခန်းစာ']];
+  const errs=[...new Set(cases.filter(c=>c.kind!=='theory').map(c=>(c.error||'').replace(/error/i,'').trim()).filter(Boolean))];
+  const kinds=[['','အားလုံး'],['case','Repair case'],['lesson','Shortcut သင်ခန်းစာ'],['theory',THEORY]];
   const models=new Map();cases.forEach(c=>{const k=mkey(c.model);if(!k)return;const m=models.get(k)||{name:c.model,n:0};m.n++;models.set(k,m)});
   if(fmodel&&!models.has(fmodel))fmodel='';if(chip&&!errs.includes(chip))chip='';
   const opt=(v,l,sel)=>`<option value="${esc(v)}"${sel?' selected':''}>${esc(l)}</option>`;
@@ -710,7 +763,9 @@ function render(){
   $('count').textContent=`(${show.length}/${cases.length})`;
   const groups=new Map();
   show.forEach(c=>{const k=mkey(c.model);if(!groups.has(k))groups.set(k,{name:c.model,items:[]});groups.get(k).items.push(c)});
-  $('list').innerHTML=show.length?[...groups.values()].map(g=>`<section class="group"><h3><span class="gname">${esc(g.name)}</span><span>${g.items.length} case · ${g.items.filter(c=>c.ai).length} solution</span></h3><div class="list">${g.items.map(card).join('')}</div></section>`).join('')
+  const byPart=(a,b)=>(a.kind==='theory'&&b.kind==='theory'&&a.part&&b.part)?a.part-b.part:0;
+  groups.forEach(g=>g.items.sort(byPart));
+  $('list').innerHTML=show.length?[...groups.values()].map(g=>`<section class="group"><h3><span class="gname">${esc(g.name)}</span><span>${g.items.length} ${g.items.every(c=>c.kind==='theory')?'ပိုင်း':'case'} · ${g.items.filter(c=>c.ai).length} solution</span></h3><div class="list">${g.items.map(card).join('')}</div></section>`).join('')
     :`<div class="empty">${cases.length?'ရှာတာနဲ့ ကိုက်တဲ့ case မရှိပါ':'Case မရှိသေးပါ — အပေါ်မှာ note ထည့်ပါ'}</div>`;
   document.querySelectorAll('textarea[data-sol]').forEach(t=>{if(drafts[t.dataset.sol]!==undefined)t.value=drafts[t.dataset.sol];if(t.dataset.sol===focusId)t.focus({preventScroll:true})});
 }
@@ -768,10 +823,10 @@ $('splitBtn').onclick=async()=>{
   }
   /* same text already saved → take it only once */
   const seen=new Set();
-  cases.forEach(c=>{if(!c.note)return;seen.add(normN(c.note));if(!looksLesson(c.note))c.note.split(/\n\s*\n/).forEach(b=>{const k=normN(b);if(k)seen.add(k)})});
+  cases.forEach(c=>{if(!c.note)return;seen.add(normN(c.note));if(!isLong(c.note))c.note.split(/\n\s*\n/).forEach(b=>{const k=normN(b);if(k)seen.add(k)})});
   if(seen.has(normN(note))){$('note').value='';return toast('ဒီ Note ထည့်ပြီးသား — ထပ်မယူပါ')}
   let dropped=0;
-  if(!looksLesson(note)){
+  if(!isLong(note)){
     const keep=[],inNote=new Set();
     note.split(/\n\s*\n/).forEach(b=>{const k=normN(b);if(!k)return;if(seen.has(k)||inNote.has(k)){dropped++;return}inNote.add(k);keep.push(b.trim())});
     if(!keep.length){$('note').value='';return toast('ဒီ Note ထဲက case အားလုံး ထည့်ပြီးသား — ထပ်မယူပါ')}
@@ -780,19 +835,19 @@ $('splitBtn').onclick=async()=>{
   const b=$('splitBtn');b.disabled=true;b.textContent='ခွဲနေသည်…';
   let list=[];
   if(sample){try{list=await aiParse(note)}catch(e){list=[]}}
-  if(!list.length)list=(looksLesson(note)?[ruleParse(note)]:note.split(/\n\s*\n/).map(ruleParse)).filter(o=>o&&o.model);
+  if(!list.length)list=(isLong(note)?[ruleParse(note)]:note.split(/\n\s*\n/).map(ruleParse)).filter(o=>o&&o.model);
   b.disabled=false;b.textContent='ခွဲပြီး သိမ်းမယ်';
   if(!list.length)return toast('ခွဲမရပါ — ဖုန်း model ကို ပထမစာကြောင်းမှာ ရေးပါ');
   const all=list.length;list=list.filter(o=>String(o.model||'').trim()&&String(o.diag||'').trim());
   const skipped=all-list.length;
   if(!list.length)return toast('ဖုန်း Model နဲ့ စစ်ဆေးချက် ပါတဲ့ case မရှိလို့ မသိမ်းပါ');
   const blocks=note.split(/\n\s*\n/);
-  list.forEach((o,i)=>o.note=list.length===blocks.length?blocks[i].trim():note);
+  list.forEach((o,i)=>o.note=!isLong(note)&&list.length===blocks.length?blocks[i].trim():note);
   const skipMsg=skipped?` (Model/စစ်ဆေးချက် မပါတဲ့ ${skipped} ခု ချန်ထားတယ်)`:'';
   const dupMsg=dropped?` (ထည့်ပြီးသားစာ ${dropped} ခု ထပ်မယူ)`:'';
   try{
     const r=await addMany(list);fill(r.first);if(r.first&&r.first.id)openCards.add(r.first.id);$('note').value='';
-    toast((r.added&&r.dup?`အသစ် ${r.added} ခု သိမ်းပြီ၊ ရှိပြီးသား ${r.dup} ခု ထပ်မထည့်ပါ`:r.dup?'ဒီ case ရှိပြီးသား — အသစ်မထည့်ပါ (ကြုံဖူးအကြိမ် +1)':r.added>1?`${r.added} case ခွဲပြီး သိမ်းပြီ`:'ခွဲပြီး သိမ်းပြီ — Prompt ကူးလို့ရပြီ')+skipMsg+dupMsg);
+    toast((r.added&&r.dup?`အသစ် ${r.added} ခု သိမ်းပြီ၊ ရှိပြီးသား ${r.dup} ခု ထပ်မထည့်ပါ`:r.dup?'ဒီ case ရှိပြီးသား — အသစ်မထည့်ပါ (ကြုံဖူးအကြိမ် +1)':r.added>1?`${r.added} case ခွဲပြီး သိမ်းပြီ`:(r.first&&r.first.kind==='theory'?'သင်ခန်းစာ သိမ်းပြီ — Prompt ကူးလို့ရပြီ':'ခွဲပြီး သိမ်းပြီ — Prompt ကူးလို့ရပြီ'))+skipMsg+dupMsg);
   }catch(x){toast('သိမ်းမရပါ: '+(x.message||x))}
 };
 
@@ -804,7 +859,8 @@ const ACT=['change','reball','jumper','clean','replace','ပြန်ဆက်',
 const acts=s=>new Set(ACT.filter(k=>String(s||'').toLowerCase().includes(k)));
 function sameCase(a,b){
   if((a.kind||'case')!==(b.kind||'case'))return false;
-  if(a.kind==='lesson'&&a.note&&b.note&&normN(a.note)===normN(b.note))return true;
+  if(a.kind!=='case'&&a.kind&&a.note&&b.note&&normN(a.note)===normN(b.note))return true;
+  if(a.kind==='theory')return mkey(a.model)===mkey(b.model)&&(a.part&&b.part?a.part===b.part:norm(a.title||a.error)===norm(b.title||b.error));
   if(a.kind==='lesson')return mkey(a.model)===mkey(b.model)&&norm(a.error)===norm(b.error)&&norm(a.title)===norm(b.title)&&norm(a.diag).slice(0,60)===norm(b.diag).slice(0,60);
   if(mkey(a.model)!==mkey(b.model)||norm(a.error)!==norm(b.error))return false;
   if(norm(a.fix)===norm(b.fix))return true;
@@ -915,11 +971,11 @@ $('list').addEventListener('click',async e=>{
 
   else if(a==='savesol'){const t=document.querySelector(`textarea[data-sol="${c.id}"]`);const v=t?fixMM(t.value).text.trim():'';if(!v)return toast('Gemini အဖြေကို paste လုပ်ပါ');
     try{openSol.delete(c.id);if(t)t.value='';await put({...c,ai:v});toast(`Solution ကို ${c.model} အောက်မှာ သိမ်းပြီ`);if(mode!=='db')render()}catch(x){toast('သိမ်းမရပါ')}}
-  else if(a==='view'){viewCase={id:c.id,field:'ai',text:c.ai||''};viewRender();openView(c.model,`${c.error} — ဖုန်း Solution`,false)}
+  else if(a==='view'){viewCase={id:c.id,field:'ai',text:c.ai||''};viewRender();openView(c.model,`${c.error} — ${c.kind==='theory'?'Gemini ရှင်းလင်းချက်':'ဖုန်း Solution'}`,false)}
   else if(a==='note'){
     if(c.note){viewCase={id:c.id,field:'note',text:c.note};viewRender();openView(c.model,`${c.error} — မူရင်းစာ`,false)}
     else{const sec=(k,v)=>v?`<h3>${esc(k)}</h3><p>${esc(v).replace(/\n/g,'<br>')}</p>`:'';
-      viewCase={id:c.id,text:[c.diag,c.fix].filter(Boolean).join('\n\n'),html:sec('ခေါင်းစဉ်',c.kind==='lesson'&&c.title)+sec(c.kind==='lesson'?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',c.diag)+sec('IC',c.ics)+sec(c.kind==='lesson'?'အထူးသတိထားရန်':'ပြင်နည်း',c.fix)+sec('တူတဲ့ Model / Platform',c.applies)+sec('ဆရာ / Source',c.source)};
+      viewCase={id:c.id,text:[c.diag,c.fix].filter(Boolean).join('\n\n'),html:sec('ခေါင်းစဉ်',c.kind!=='case'&&c.title)+sec(c.kind==='lesson'?'စစ်ရမယ့် လမ်းကြောင်း / အချက်':'စစ်ဆေးချက်',c.diag)+sec('IC',c.ics)+sec(c.kind==='lesson'?'အထူးသတိထားရန်':'ပြင်နည်း',c.fix)+sec('တူတဲ့ Model / Platform',c.applies)+sec('ဆရာ / Source',c.source)};
       viewRender();openView(c.model,`${c.error} — အပြည့်`,false)}}
   else if(a==='sol'){openSol.add(c.id);render();const t=document.querySelector(`textarea[data-sol="${c.id}"]`);if(t)t.focus()}
   else if(a==='edit'){fill(c);$('fieldsBox').open=true;$('fieldsBox').scrollIntoView({behavior:'smooth'})}
